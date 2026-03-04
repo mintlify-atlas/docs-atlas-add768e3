@@ -1,0 +1,164 @@
+{
+  "projectType": "general",
+  "projectName": "Microsoft PowerToys",
+  "projectDescription": "A collection of utilities that help you customize Windows and streamline everyday tasks.",
+  "theme": "almond",
+  "primaryColor": "#0078D4",
+  "lightColor": "#50E6FF",
+  "darkColor": "#0063B1",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Utilities",
+            "pages": [
+              "utilities/advanced-paste",
+              "utilities/always-on-top",
+              "utilities/awake",
+              "utilities/color-picker",
+              "utilities/command-not-found",
+              "utilities/command-palette",
+              "utilities/crop-and-lock",
+              "utilities/environment-variables",
+              "utilities/fancyzones",
+              "utilities/file-explorer-addons",
+              "utilities/file-locksmith",
+              "utilities/hosts-file-editor",
+              "utilities/image-resizer",
+              "utilities/keyboard-manager",
+              "utilities/light-switch"
+            ]
+          },
+          {
+            "group": "Mouse & Input",
+            "pages": [
+              "utilities/find-my-mouse",
+              "utilities/mouse-highlighter",
+              "utilities/mouse-jump",
+              "utilities/mouse-crosshairs",
+              "utilities/mouse-without-borders",
+              "utilities/quick-accent"
+            ]
+          },
+          {
+            "group": "Productivity Tools",
+            "pages": [
+              "utilities/powertoys-run",
+              "utilities/peek",
+              "utilities/powerrename",
+              "utilities/new-plus",
+              "utilities/screen-ruler",
+              "utilities/shortcut-guide",
+              "utilities/text-extractor",
+              "utilities/workspaces",
+              "utilities/zoomit",
+              "utilities/registry-preview"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/settings-overview",
+              "configuration/keyboard-shortcuts",
+              "configuration/group-policy"
+            ]
+          },
+          {
+            "group": "Community & Support",
+            "pages": [
+              "community/contributing",
+              "community/faq",
+              "community/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "dev/architecture-overview",
+              "dev/runner",
+              "dev/module-interface",
+              "dev/settings-system"
+            ]
+          },
+          {
+            "group": "Development Guide",
+            "pages": [
+              "dev/building",
+              "dev/debugging",
+              "dev/testing",
+              "dev/coding-style",
+              "dev/creating-new-utility"
+            ]
+          },
+          {
+            "group": "Plugin Development",
+            "pages": [
+              "dev/plugin-overview",
+              "dev/powertoys-run-plugins",
+              "dev/command-palette-extensions"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Advanced Paste - Enhanced clipboard management with AI-powered transformations",
+    "FancyZones - Advanced window layout manager for organizing applications",
+    "PowerToys Run - Quick launcher for applications, files, and commands",
+    "Color Picker - System-wide color picker utility with history",
+    "Keyboard Manager - Remap keys and create custom keyboard shortcuts",
+    "PowerRename - Bulk file renaming with regex support",
+    "Image Resizer - Batch resize images from context menu",
+    "File Locksmith - Find which processes are using a file",
+    "Text Extractor - Extract text from images using OCR",
+    "Mouse Utilities - Find My Mouse, Mouse Highlighter, Mouse Jump, and Crosshairs",
+    "Peek - Quick file preview with spacebar",
+    "Command Palette - Universal command launcher with extensibility",
+    "Workspaces - Save and restore application layouts",
+    "Always on Top - Pin windows to stay on top",
+    "Awake - Keep computer awake without changing power settings",
+    "Hosts File Editor - Easily edit the Windows hosts file",
+    "Registry Preview - Visualize registry file changes",
+    "Screen Ruler - Measure pixels on screen",
+    "Shortcut Guide - Display Windows keyboard shortcuts",
+    "Mouse Without Borders - Control multiple computers with one mouse and keyboard",
+    "ZoomIt - Screen zoom and annotation tool",
+    "Quick Accent - Type accented characters easily",
+    "New+ - Create new files from templates via context menu",
+    "Crop and Lock - Crop windows to specific regions",
+    "Light Switch - Toggle between light and dark themes"
+  ],
+  "publicApiSurface": [
+    "PowerToys Runner (PowerToys.exe)",
+    "Settings UI Application",
+    "Module Interface (IModule)",
+    "PowerToys Run Plugin API",
+    "Command Palette Extension SDK",
+    "FancyZones CLI",
+    "File Locksmith CLI",
+    "Image Resizer CLI",
+    "Awake CLI",
+    "Context Menu Integrations (PowerRename, Image Resizer, File Locksmith)",
+    "File Explorer Add-ons (Preview Handlers)",
+    "Keyboard Manager Key Remapping Engine",
+    "Named Pipe IPC Communication",
+    "Settings JSON API",
+    "Group Policy (GPO) Configuration"
+  ]
+}
