@@ -1,0 +1,837 @@
+---
+title: Module Interface
+description: How to implement a PowerToys module using PowertoyModuleIface
+---
+
+## Overview
+
+Every PowerToys module must implement the `PowertoyModuleIface` interface, which defines a standardized contract between the module and the Runner. This interface enables the Runner to load, configure, enable, disable, and communicate with modules in a consistent manner.
+
+## PowertoyModuleIface Definition
+
+The module interface is defined in `src/modules/interface/powertoy_module_interface.h`:
+
+```cpp
+class PowertoyModuleIface
+{
+public:
+    /* Returns the localized name of the PowerToy*/
+    virtual const wchar_t* get_name() = 0;
+    
+    /* Returns non localized name of the PowerToy, this will be cached by the runner. */
+    virtual const wchar_t* get_key() = 0;
+    
+    /* Fills a buffer with the available configuration settings.
+     * If 'buffer' is a null ptr or the buffer size is not large enough
+     * sets the required buffer size in 'buffer_size' and return false.
+     * Returns true if successful.
+     */
+    virtual bool get_config(wchar_t* buffer, int* buffer_size) = 0;
+    
+    /* Sets the configuration values. */
+    virtual void set_config(const wchar_t* config) = 0;
+    
+    /* Call custom action from settings screen. */
+    virtual void call_custom_action(const wchar_t* /*action*/){};  // Optional
+    
+    /* Enables the PowerToy. */
+    virtual void enable() = 0;
+    
+    /* Disables the PowerToy, should free as much memory as possible. */
+    virtual void disable() = 0;
+    
+    /* Should return if the PowerToys is enabled or disabled. */
+    virtual bool is_enabled() = 0;
+    
+    /* Destroy the PowerToy and free all memory. */
+    virtual void destroy() = 0;
+
+    /* Get the list of hotkeys. Should return the number of available hotkeys and
+     * fill up the buffer to the minimum of the number of hotkeys and its size.
+     * Modules do not need to override this method, it will return zero by default.
+     * This method is called even when the module is disabled.
+     */
+    virtual size_t get_hotkeys(Hotkey* /*buffer*/, size_t /*buffer_size*/) {
+        return 0;
+    }
+    
+    /* Alternative hotkey registration method */
+    virtual std::optional<HotkeyEx> GetHotkeyEx() {
+        return std::nullopt;
+    }
+    
+    /* Called when registered hotkey is pressed */
+    virtual void OnHotkeyEx() {}
+    
+    /* Called when one of the registered hotkeys is pressed. Should return true
+     * if the key press is to be swallowed.
+     */
+    virtual bool on_hotkey(size_t /*hotkeyId*/) {
+        return false;
+    }
+    
+    /* Provides the GPO configuration value for the module */
+    virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() {
+        return powertoys_gpo::gpo_rule_configured_not_configured;
+    }
+    
+    /* Send telemetry about settings */
+    virtual void send_settings_telemetry() {}
+    
+    /* Whether module is enabled by default */
+    virtual bool is_enabled_by_default() const { return true; }
+};
+```
+
+**Reference:** `src/modules/interface/powertoy_module_interface.h:37-171`
+
+## Module Lifecycle
+
+The Runner interacts with modules following this lifecycle:
+
+```
+┌──────────────────────────────────────────────────────┐
+│                  Module Lifecycle                       │
+│                                                        │
+│  1. Runner loads module DLL                            │
+│  2. Runner calls powertoy_create()                     │
+│         ↓                                              │
+│  3. Runner calls get_key()                             │
+│  4. Runner calls get_config()                          │
+│  5. Runner calls set_config() with saved settings      │
+│  6. Runner calls get_hotkeys() / GetHotkeyEx()         │
+│         ↓                                              │
+│  7. Runner calls enable() (if module is enabled)       │
+│         ↓                                              │
+│  [Module is now active]                                │
+│         ↓                                              │
+│  During operation:                                     │
+│    - set_config() when user changes settings           │
+│    - on_hotkey() when hotkey is pressed                │
+│    - OnHotkeyEx() for HotkeyEx-based modules           │
+│    - call_custom_action() for custom UI actions        │
+│    - disable() / enable() to toggle module             │
+│         ↓                                              │
+│  On shutdown:                                          │
+│  8. Runner calls disable()                             │
+│  9. Runner calls destroy()                             │
+│ 10. Runner unloads DLL                                 │
+└──────────────────────────────────────────────────────┘
+```
+
+**Reference:** `src/modules/interface/powertoy_module_interface.h:6-35`
+
+## Implementing a Simple Module
+
+Here's a complete example of a simple module implementation based on Find My Mouse:
+
+### 1. Basic Module Class
+
+```cpp
+// dllmain.cpp
+#include "pch.h"
+#include <interface/powertoy_module_interface.h>
+#include <common/SettingsAPI/settings_objects.h>
+#include <common/utils/logger_helper.h>
+
+const wchar_t* MODULE_NAME = L"MyModule";
+const wchar_t* MODULE_DESC = L"Description of my module";
+
+class MyModule : public PowertoyModuleIface
+{
+private:
+    bool m_enabled = false;
+    HotkeyEx m_hotkey;
+    
+public:
+    MyModule()
+    {
+        // Initialize logger
+        LoggerHelpers::init_logger(MODULE_NAME, L"ModuleInterface", 
+                                   LogSettings::myModuleLoggerName);
+    }
+    
+    // Return the localized display name
+    virtual const wchar_t* get_name() override
+    {
+        return MODULE_NAME;
+    }
+    
+    // Return the non-localized key (used for settings files)
+    virtual const wchar_t* get_key() override
+    {
+        return MODULE_NAME;
+    }
+    
+    // Called when module is destroyed
+    virtual void destroy() override
+    {
+        disable();
+        delete this;
+    }
+    
+    // Enable the module
+    virtual void enable() override
+    {
+        m_enabled = true;
+        Logger::info("MyModule enabled");
+        
+        // Start your module's functionality here
+        // Can spawn threads, create windows, etc.
+    }
+    
+    // Disable the module
+    virtual void disable() override
+    {
+        if (m_enabled) {
+            m_enabled = false;
+            Logger::info("MyModule disabled");
+            
+            // Clean up resources here
+        }
+    }
+    
+    // Return enabled state
+    virtual bool is_enabled() override
+    {
+        return m_enabled;
+    }
+};
+
+// Factory function - required export
+extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+{
+    return new MyModule();
+}
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp:62-110`
+
+### 2. Settings Support
+
+Add configuration management to your module:
+
+```cpp
+class MyModule : public PowertoyModuleIface
+{
+private:
+    struct Settings
+    {
+        bool some_option = true;
+        int numeric_value = 42;
+        std::wstring text_value = L"default";
+    } m_settings;
+    
+    void init_settings()
+    {
+        try {
+            PowerToysSettings::PowerToyValues settings =
+                PowerToysSettings::PowerToyValues::load_from_settings_file(get_key());
+            parse_settings(settings);
+        }
+        catch (std::exception&) {
+            Logger::warn("Failed to load settings, using defaults");
+        }
+    }
+    
+    void parse_settings(PowerToysSettings::PowerToyValues& settings)
+    {
+        auto settingsObject = settings.get_raw_json();
+        
+        if (settingsObject.HasKey(L"properties")) {
+            auto properties = settingsObject.GetNamedObject(L"properties");
+            
+            // Parse boolean option
+            if (properties.HasKey(L"some_option")) {
+                auto option = properties.GetNamedObject(L"some_option");
+                m_settings.some_option = option.GetNamedBoolean(L"value", true);
+            }
+            
+            // Parse numeric option
+            if (properties.HasKey(L"numeric_value")) {
+                auto option = properties.GetNamedObject(L"numeric_value");
+                m_settings.numeric_value = 
+                    static_cast<int>(option.GetNamedNumber(L"value", 42));
+            }
+            
+            // Parse string option
+            if (properties.HasKey(L"text_value")) {
+                auto option = properties.GetNamedObject(L"text_value");
+                m_settings.text_value = 
+                    option.GetNamedString(L"value", L"default").c_str();
+            }
+        }
+    }
+    
+public:
+    MyModule()
+    {
+        LoggerHelpers::init_logger(MODULE_NAME, L"ModuleInterface", 
+                                   LogSettings::myModuleLoggerName);
+        init_settings();
+    }
+    
+    // Get configuration schema
+    virtual bool get_config(wchar_t* buffer, int* buffer_size) override
+    {
+        HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
+        
+        PowerToysSettings::Settings settings(hinstance, get_name());
+        settings.set_description(MODULE_DESC);
+        settings.set_overview_link(L"https://aka.ms/PowerToysOverview_MyModule");
+        
+        return settings.serialize_to_buffer(buffer, buffer_size);
+    }
+    
+    // Apply new configuration
+    virtual void set_config(const wchar_t* config) override
+    {
+        try {
+            PowerToysSettings::PowerToyValues values =
+                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+            
+            parse_settings(values);
+            
+            // Apply the new settings
+            apply_settings();
+            
+            // Persist to disk
+            values.save_to_settings_file();
+        }
+        catch (std::exception& e) {
+            Logger::error("Failed to set config: {}", e.what());
+        }
+    }
+    
+private:
+    void apply_settings()
+    {
+        // Apply settings changes to running module
+        Logger::info("Applying settings: some_option={}, numeric_value={}",
+                    m_settings.some_option, m_settings.numeric_value);
+    }
+};
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp:206-246`
+
+### 3. Hotkey Support
+
+Add hotkey handling to your module:
+
+```cpp
+class MyModule : public PowertoyModuleIface
+{
+private:
+    HotkeyEx m_hotkey;
+    
+    void init_hotkey()
+    {
+        // Default hotkey: Win+Shift+M
+        m_hotkey.modifiersMask = MOD_WIN | MOD_SHIFT;
+        m_hotkey.vkCode = 'M';
+        m_hotkey.id = 0;
+    }
+    
+    void parse_hotkey_from_settings(PowerToysSettings::PowerToyValues& settings)
+    {
+        auto settingsObject = settings.get_raw_json();
+        
+        if (settingsObject.HasKey(L"properties")) {
+            auto properties = settingsObject.GetNamedObject(L"properties");
+            
+            if (properties.HasKey(L"activation_shortcut")) {
+                auto hotkeyObj = properties.GetNamedObject(L"activation_shortcut");
+                auto hotkey = PowerToysSettings::HotkeyObject::from_json(hotkeyObj);
+                
+                m_hotkey.modifiersMask = 0;
+                if (hotkey.win_pressed())   m_hotkey.modifiersMask |= MOD_WIN;
+                if (hotkey.ctrl_pressed())  m_hotkey.modifiersMask |= MOD_CONTROL;
+                if (hotkey.shift_pressed()) m_hotkey.modifiersMask |= MOD_SHIFT;
+                if (hotkey.alt_pressed())   m_hotkey.modifiersMask |= MOD_ALT;
+                
+                m_hotkey.vkCode = static_cast<WORD>(hotkey.get_code());
+            }
+        }
+    }
+    
+public:
+    MyModule()
+    {
+        LoggerHelpers::init_logger(MODULE_NAME, L"ModuleInterface", 
+                                   LogSettings::myModuleLoggerName);
+        init_hotkey();
+        init_settings();
+    }
+    
+    // Return the hotkey (called by Runner even when disabled)
+    virtual std::optional<HotkeyEx> GetHotkeyEx() override
+    {
+        return m_hotkey;
+    }
+    
+    // Called when hotkey is pressed
+    virtual void OnHotkeyEx() override
+    {
+        if (!m_enabled) {
+            return;
+        }
+        
+        Logger::info("Hotkey pressed!");
+        
+        // Execute your module's main action
+        DoSomethingInteresting();
+    }
+    
+private:
+    void DoSomethingInteresting()
+    {
+        // Your module's main functionality
+        Logger::info("Doing something interesting!");
+    }
+};
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp:183-203`
+
+### 4. Multiple Hotkeys
+
+For modules with multiple hotkeys (like Advanced Paste):
+
+```cpp
+class MyModule : public PowertoyModuleIface
+{
+private:
+    static const constexpr int NUM_HOTKEYS = 3;
+    Hotkey m_hotkey_action1;
+    Hotkey m_hotkey_action2;
+    Hotkey m_hotkey_action3;
+    
+public:
+    // Return all hotkeys
+    virtual size_t get_hotkeys(Hotkey* hotkeys, size_t buffer_size) override
+    {
+        if (hotkeys && buffer_size >= NUM_HOTKEYS)
+        {
+            hotkeys[0] = m_hotkey_action1;
+            hotkeys[1] = m_hotkey_action2;
+            hotkeys[2] = m_hotkey_action3;
+        }
+        
+        return NUM_HOTKEYS;
+    }
+    
+    // Handle hotkey press by ID
+    virtual bool on_hotkey(size_t hotkeyId) override
+    {
+        if (!m_enabled) {
+            return false;
+        }
+        
+        switch (hotkeyId)
+        {
+        case 0:
+            Logger::info("Action 1 hotkey pressed");
+            DoAction1();
+            return true;  // Swallow keystroke
+            
+        case 1:
+            Logger::info("Action 2 hotkey pressed");
+            DoAction2();
+            return true;
+            
+        case 2:
+            Logger::info("Action 3 hotkey pressed");
+            DoAction3();
+            return true;
+            
+        default:
+            return false;  // Unknown hotkey ID
+        }
+    }
+};
+```
+
+**Important:** The order of hotkeys returned by `get_hotkeys()` must match the order expected by the Settings UI for conflict detection.
+
+**Reference:** `src/modules/AdvancedPaste/AdvancedPasteModuleInterface/dllmain.cpp:1053-1071`
+
+## External Application Module
+
+For modules that launch separate applications (like Color Picker):
+
+```cpp
+class MyExternalModule : public PowertoyModuleIface
+{
+private:
+    bool m_enabled = false;
+    HANDLE m_hProcess = nullptr;
+    HANDLE m_hInvokeEvent = nullptr;
+    
+    bool is_process_running()
+    {
+        return WaitForSingleObject(m_hProcess, 0) == WAIT_TIMEOUT;
+    }
+    
+    void launch_process()
+    {
+        Logger::trace(L"Launching external process");
+        
+        unsigned long powertoys_pid = GetCurrentProcessId();
+        std::wstring args = std::to_wstring(powertoys_pid);
+        
+        SHELLEXECUTEINFOW sei{ sizeof(sei) };
+        sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+        sei.lpFile = L"MyModule.UI.exe";
+        sei.nShow = SW_SHOWNORMAL;
+        sei.lpParameters = args.data();
+        
+        if (ShellExecuteExW(&sei)) {
+            Logger::trace("Successfully started external process");
+            m_hProcess = sei.hProcess;
+        }
+        else {
+            Logger::error(L"Failed to start process: {}", GetLastError());
+        }
+    }
+    
+public:
+    MyExternalModule()
+    {
+        LoggerHelpers::init_logger(MODULE_NAME, L"ModuleInterface", 
+                                   LogSettings::myModuleLoggerName);
+        
+        // Create event for IPC with external process
+        m_hInvokeEvent = CreateDefaultEvent(L"MyModule_Invoke_Event");
+    }
+    
+    virtual void enable() override
+    {
+        m_enabled = true;
+        ResetEvent(m_hInvokeEvent);
+        launch_process();
+    }
+    
+    virtual void disable() override
+    {
+        if (m_enabled) {
+            m_enabled = false;
+            
+            // Request graceful shutdown
+            SetEvent(m_hTerminateEvent);
+            
+            // Wait briefly for clean exit
+            WaitForSingleObject(m_hProcess, 1500);
+            
+            // Force terminate if still running
+            TerminateProcess(m_hProcess, 1);
+        }
+    }
+    
+    virtual bool on_hotkey(size_t hotkeyId) override
+    {
+        if (m_enabled) {
+            Logger::trace(L"Hotkey pressed, invoking external app");
+            
+            // Launch if not running
+            if (!is_process_running()) {
+                launch_process();
+            }
+            
+            // Signal the application
+            SetEvent(m_hInvokeEvent);
+            return true;
+        }
+        
+        return false;
+    }
+};
+```
+
+**Reference:** `src/modules/colorPicker/ColorPicker/dllmain.cpp:48-309`
+
+## Group Policy Support
+
+Add GPO support to allow enterprise policy control:
+
+```cpp
+virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+{
+    return powertoys_gpo::getConfiguredMyModuleEnabledValue();
+}
+```
+
+You'll also need to:
+
+1. Add your module's GPO function to `src/common/utils/gpo.h`:
+
+```cpp
+inline gpo_rule_configured_t getConfiguredMyModuleEnabledValue()
+{
+    return getConfiguredValue(POWERTOYS_MYMODULE_ENABLED_POLICY);
+}
+```
+
+2. Define the policy registry key in `src/common/utils/gpo.h`:
+
+```cpp
+const std::wstring POWERTOYS_MYMODULE_ENABLED_POLICY = 
+    L"Software\\Policies\\Microsoft\\PowerToys\\MyModule";
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp:112-115`
+
+## Telemetry
+
+Implement telemetry to track usage:
+
+```cpp
+class MyModule : public PowertoyModuleIface
+{
+private:
+    HANDLE m_sendTelemetryEvent = nullptr;
+    
+public:
+    MyModule()
+    {
+        // ...
+        m_sendTelemetryEvent = CreateDefaultEvent(L"MyModule_SendTelemetry_Event");
+    }
+    
+    virtual void send_settings_telemetry() override
+    {
+        SetEvent(m_sendTelemetryEvent);
+    }
+};
+```
+
+In your module's main thread, listen for the telemetry event and send data:
+
+```cpp
+void MyModuleMain()
+{
+    while (running) {
+        if (WaitForSingleObject(sendTelemetryEvent, 0) == WAIT_OBJECT_0) {
+            Trace::MyModule_SettingsTelemetry(
+                m_settings.some_option,
+                m_settings.numeric_value
+            );
+            ResetEvent(sendTelemetryEvent);
+        }
+        
+        // ... rest of main loop
+    }
+}
+```
+
+**Reference:** `src/modules/colorPicker/ColorPicker/dllmain.cpp:161`, `doc/devdocs/core/settings/telemetry.md`
+
+## DLL Entry Point
+
+Every module DLL needs a `DllMain` function:
+
+```cpp
+#include "pch.h"
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+HMODULE m_hModule;
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+{
+    m_hModule = hModule;
+    
+    switch (ul_reason_for_call)
+    {
+    case DLL_PROCESS_ATTACH:
+        Trace::RegisterProvider();
+        break;
+        
+    case DLL_THREAD_ATTACH:
+    case DLL_THREAD_DETACH:
+        break;
+        
+    case DLL_PROCESS_DETACH:
+        Trace::UnregisterProvider();
+        break;
+    }
+    
+    return TRUE;
+}
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp:38-54`
+
+## Best Practices
+
+### Memory Management
+
+1. **Clean up in `disable()`**: Free resources, stop threads, close handles
+2. **Final cleanup in `destroy()`**: Call `disable()` and `delete this`
+3. **Check enabled state**: Guard operations with `if (m_enabled)`
+
+### Threading
+
+1. **Don't block `enable()`**: Spawn threads for long-running operations
+2. **Clean thread shutdown**: Use events or flags to signal threads to exit
+3. **Detach or join**: Either detach threads or properly join them in `disable()`
+
+### Hotkeys
+
+1. **Fast handlers**: Hotkey handlers must execute quickly to avoid Windows deregistering the hook
+2. **Spawn threads**: Move actual work to background threads
+3. **Return quickly**: Return from `on_hotkey()` within milliseconds
+
+**Example:**
+
+```cpp
+virtual bool on_hotkey(size_t hotkeyId) override
+{
+    if (m_enabled) {
+        // DON'T do heavy work here - spawn a thread instead
+        std::thread([this]() {
+            DoHeavyWork();
+        }).detach();
+        
+        return true;
+    }
+    return false;
+}
+```
+
+**Reference:** `src/modules/AdvancedPaste/AdvancedPasteModuleInterface/dllmain.cpp:990-998`
+
+### Settings
+
+1. **Validate input**: Check ranges and types when parsing settings
+2. **Provide defaults**: Always have sensible fallback values
+3. **Persist changes**: Call `save_to_settings_file()` after user changes
+4. **Apply immediately**: Update running state when settings change
+
+### Logging
+
+1. **Initialize logger**: Call `LoggerHelpers::init_logger()` in constructor
+2. **Use appropriate levels**: `trace`, `info`, `warn`, `error`
+3. **Include context**: Log module name and operation details
+4. **Don't spam**: Avoid logging in hot paths
+
+```cpp
+Logger::info("Module enabled with option={}", m_settings.some_option);
+Logger::error("Failed to do thing: {}", error_message);
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp:87-88`
+
+## Testing Your Module
+
+### Manual Testing
+
+1. **Build your module**: Place DLL in `modules/` folder
+2. **Restart Runner**: Kill `PowerToys.exe` and restart
+3. **Check Settings UI**: Your module should appear in Settings
+4. **Test enable/disable**: Toggle module and verify behavior
+5. **Test hotkeys**: Press configured hotkeys and check logs
+6. **Test settings**: Change settings and verify they apply
+
+### Debugging
+
+1. **Attach debugger** to `PowerToys.exe` process
+2. **Set breakpoints** in your module's DLL code
+3. **Check logs**: `%LOCALAPPDATA%\Microsoft\PowerToys\logs\`
+4. **Use debug builds**: Debug symbols help tremendously
+
+## Complete Example: Simple Module
+
+Here's a complete minimal module that appears in Settings and logs when enabled:
+
+```cpp
+// dllmain.cpp
+#include "pch.h"
+#include <interface/powertoy_module_interface.h>
+#include <common/utils/logger_helper.h>
+
+const wchar_t* MODULE_NAME = L"ExampleModule";
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+HMODULE g_hModule;
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+{
+    g_hModule = hModule;
+    return TRUE;
+}
+
+class ExampleModule : public PowertoyModuleIface
+{
+private:
+    bool m_enabled = false;
+    
+public:
+    ExampleModule()
+    {
+        LoggerHelpers::init_logger(MODULE_NAME, L"ModuleInterface", MODULE_NAME);
+        Logger::info("ExampleModule created");
+    }
+    
+    virtual const wchar_t* get_name() override { return MODULE_NAME; }
+    virtual const wchar_t* get_key() override { return MODULE_NAME; }
+    
+    virtual bool get_config(wchar_t* buffer, int* buffer_size) override
+    {
+        HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
+        PowerToysSettings::Settings settings(hinstance, get_name());
+        settings.set_description(L"An example PowerToys module");
+        return settings.serialize_to_buffer(buffer, buffer_size);
+    }
+    
+    virtual void set_config(const wchar_t* config) override
+    {
+        // Parse and apply configuration
+    }
+    
+    virtual void enable() override
+    {
+        m_enabled = true;
+        Logger::info("ExampleModule enabled");
+    }
+    
+    virtual void disable() override
+    {
+        m_enabled = false;
+        Logger::info("ExampleModule disabled");
+    }
+    
+    virtual bool is_enabled() override
+    {
+        return m_enabled;
+    }
+    
+    virtual void destroy() override
+    {
+        Logger::info("ExampleModule destroyed");
+        disable();
+        delete this;
+    }
+};
+
+extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+{
+    return new ExampleModule();
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Settings System" icon="sliders" href="./settings-system">
+    Learn how to create a Settings UI for your module
+  </Card>
+  <Card title="Runner Implementation" icon="gears" href="./runner">
+    Understand how the Runner loads and manages modules
+  </Card>
+  <Card title="Architecture Overview" icon="sitemap" href="./architecture-overview">
+    High-level system architecture
+  </Card>
+  <Card title="Common Libraries" icon="book" href="../common-libraries">
+    Shared utilities you can use in your module
+  </Card>
+</CardGroup>

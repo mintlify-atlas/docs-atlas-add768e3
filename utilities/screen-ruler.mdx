@@ -1,0 +1,333 @@
+---
+title: Screen Ruler
+description: Measure pixels on your screen with horizontal and vertical rulers, perfect for design and layout work.
+---
+
+Screen Ruler (also known as Measure Tool) provides on-screen measurement tools to measure pixels, distances, and dimensions. Essential for UI design, development, and precise screen layout work.
+
+## Activation
+
+<Steps>
+  <Step title="Activate Shortcut">
+    Press `Win + Shift + M` to activate Screen Ruler.
+  </Step>
+  <Step title="Measurement Mode">
+    Click and drag to create measurement lines on screen.
+  </Step>
+  <Step title="Close Tool">
+    Press `Esc` or click outside the measurement area to exit.
+  </Step>
+</Steps>
+
+<Note>
+  Customize the activation shortcut in PowerToys Settings > Screen Ruler.
+</Note>
+
+## Measurement Modes
+
+Screen Ruler provides multiple measurement styles:
+
+### Measure Styles
+
+From source `/src/modules/MeasureTool/MeasureToolUI/Settings.cs:16-28`:
+
+<Tabs>
+  <Tab title="Horizontal Ruler">
+    Measure horizontal distances across the screen.
+    
+    - Click and drag horizontally
+    - Displays pixel width
+    - Shows start and end coordinates
+  </Tab>
+  
+  <Tab title="Vertical Ruler">
+    Measure vertical distances on screen.
+    
+    - Click and drag vertically
+    - Displays pixel height
+    - Shows start and end coordinates
+  </Tab>
+  
+  <Tab title="Bounds">
+    Measure rectangular areas with width and height.
+    
+    - Click and drag to create rectangle
+    - Displays width × height in pixels
+    - Shows area dimensions
+  </Tab>
+  
+  <Tab title="Spacing">
+    Measure spacing between UI elements.
+    
+    - Automatically detects element edges
+    - Shows spacing in pixels
+    - Useful for margin and padding measurements
+  </Tab>
+</Tabs>
+
+The default measurement style is configured through:
+```csharp
+MeasureToolMeasureStyle.None // From Settings.cs:26
+```
+
+## Features
+
+### Pixel-Perfect Measurements
+
+<Accordion title="Measurement Precision">
+  Screen Ruler measures in screen pixels with:
+  
+  - 1-pixel precision
+  - Real-time coordinate display
+  - DPI-aware measurements
+  - Multi-monitor support
+</Accordion>
+
+### Visual Indicators
+
+<CardGroup cols={2}>
+  <Card title="Measurement Lines" icon="ruler">
+    Colored overlay lines show measurement boundaries with pixel counts.
+  </Card>
+  
+  <Card title="Coordinate Display" icon="location-crosshairs">
+    Live X/Y coordinates update as you move the cursor.
+  </Card>
+  
+  <Card title="Distance Labels" icon="text">
+    Pixel measurements appear next to measurement lines.
+  </Card>
+  
+  <Card title="Crosshair Cursor" icon="crosshairs">
+    Precise cursor positioning for exact measurements.
+  </Card>
+</CardGroup>
+
+### Multi-Monitor Support
+
+Screen Ruler works across multiple displays:
+- Measure across monitor boundaries
+- DPI-aware for mixed DPI setups
+- Virtual screen coordinate system
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="UI/UX Design">
+    **Verify Design Specifications:**
+    - Check element dimensions match mockups
+    - Measure spacing between components
+    - Verify alignment and padding
+    - Ensure consistent margins
+    
+    **Example:** Measure button width to verify it matches 120px design spec.
+  </Accordion>
+  
+  <Accordion title="Web Development">
+    **CSS Layout Verification:**
+    - Measure responsive breakpoints
+    - Check element positioning
+    - Verify flexbox/grid spacing
+    - Debug alignment issues
+    
+    **Example:** Measure container width to ensure CSS max-width is correct.
+  </Accordion>
+  
+  <Accordion title="Application Development">
+    **Window and Control Sizing:**
+    - Measure dialog box dimensions
+    - Check control spacing
+    - Verify window layouts
+    - Test responsive behavior
+    
+    **Example:** Measure dialog button spacing to ensure consistency.
+  </Accordion>
+  
+  <Accordion title="Screenshot Analysis">
+    **Compare Layouts:**
+    - Measure elements in screenshots
+    - Compare before/after changes
+    - Document dimensions
+    - Create specifications
+    
+    **Example:** Measure navbar height in competitor's app for reference.
+  </Accordion>
+  
+  <Accordion title="Accessibility Testing">
+    **Touch Target Sizes:**
+    - Verify minimum touch target sizes (44×44px recommended)
+    - Check button dimensions
+    - Measure interactive elements
+    - Ensure WCAG compliance
+    
+    **Example:** Measure mobile button to ensure it meets 44px minimum.
+  </Accordion>
+</AccordionGroup>
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win + Shift + M` | Activate Screen Ruler (default) |
+| `Esc` | Close Screen Ruler |
+| `Click + Drag` | Create measurement |
+| `Shift + Drag` | Constrain to horizontal/vertical |
+
+<Tip>
+  Hold Shift while dragging to snap measurements to horizontal or vertical axes.
+</Tip>
+
+## Configuration
+
+### Activation Shortcut
+
+Customize the activation shortcut in PowerToys Settings:
+
+<Steps>
+  <Step title="Open Settings">
+    Open PowerToys Settings > Screen Ruler.
+  </Step>
+  <Step title="Change Shortcut">
+    Click the activation shortcut field and press your desired key combination.
+  </Step>
+  <Step title="Save">
+    Click outside the field to save the new shortcut.
+  </Step>
+</Steps>
+
+### Display Settings
+
+Configure measurement display options:
+- Measurement line color
+- Label font size
+- Transparency level
+- Crosshair style
+
+### Default Measurement Style
+
+Set the preferred measurement mode:
+- Bounds (rectangular)
+- Horizontal ruler
+- Vertical ruler
+- Spacing detection
+
+## Advanced Features
+
+### DPI Awareness
+
+Screen Ruler is DPI-aware for accurate measurements on high-DPI displays:
+
+- Correctly measures on 4K/5K monitors
+- Handles mixed DPI multi-monitor setups
+- Scales measurements appropriately
+- Reports actual pixel values, not scaled
+
+### Spacing Detection
+
+Automatic spacing measurement between UI elements:
+
+<Steps>
+  <Step title="Enable Spacing Mode">
+    Select "Spacing" measurement style in settings.
+  </Step>
+  <Step title="Hover Over Element">
+    Move cursor near UI element edge.
+  </Step>
+  <Step title="View Spacing">
+    Tool automatically detects and displays spacing to adjacent elements.
+  </Step>
+</Steps>
+
+From test file `/src/modules/MeasureTool/Tests/ScreenRuler.UITests/TestSpacing.cs`:
+
+- Horizontal spacing detection: `TestSpacingHorizontal.cs`
+- Vertical spacing detection: `TestSpacingVertical.cs`
+
+### Bounds Measurement
+
+Measure rectangular areas with full dimension display:
+
+<CodeGroup>
+```text Bounds Output
+Width: 320px
+Height: 240px
+Area: 76,800 sq px
+```
+</CodeGroup>
+
+From test file `/src/modules/MeasureTool/Tests/ScreenRuler.UITests/TestBounds.cs`
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Screen Ruler Not Activating">
+    - Verify Screen Ruler is enabled in PowerToys Settings
+    - Check activation shortcut is not conflicting with other applications
+    - Ensure PowerToys is running
+    - Try restarting PowerToys
+  </Accordion>
+  
+  <Accordion title="Measurements Seem Incorrect">
+    - Check Windows display scaling settings
+    - Verify DPI scaling is configured correctly
+    - For multi-monitor: ensure monitor arrangement matches physical setup
+    - Some applications use non-standard DPI which may affect measurements
+  </Accordion>
+  
+  <Accordion title="Tool Not Visible">
+    - Check if overlay is behind fullscreen applications
+    - Verify display settings aren't hiding the overlay
+    - Try changing measurement line color in settings
+    - Restart Screen Ruler with activation shortcut
+  </Accordion>
+  
+  <Accordion title="Multi-Monitor Issues">
+    - Verify monitor arrangement in Windows display settings
+    - Check DPI settings for each monitor
+    - Ensure monitors are set to recommended resolution
+    - Try measuring within a single monitor first
+  </Accordion>
+</AccordionGroup>
+
+## Design Workflow Integration
+
+### Figma/Sketch to Implementation
+
+<Steps>
+  <Step title="Reference Design">
+    Open design mockup in Figma/Sketch or export as image.
+  </Step>
+  <Step title="Measure Implementation">
+    Use Screen Ruler to measure actual implementation in browser/app.
+  </Step>
+  <Step title="Compare">
+    Compare measurements against design specifications.
+  </Step>
+  <Step title="Adjust">
+    Adjust implementation to match design pixel-perfect.
+  </Step>
+</Steps>
+
+### QA Testing Workflow
+
+<Accordion title="Verify Visual Requirements">
+  1. Activate Screen Ruler during QA testing
+  2. Measure UI elements against requirements
+  3. Document discrepancies with measurements
+  4. Create bug reports with exact pixel measurements
+  5. Verify fixes using Screen Ruler
+</Accordion>
+
+## Source Code
+
+Location: `/src/modules/MeasureTool/`
+
+- Main UI: `MeasureToolUI/MeasureToolXAML/`
+- Settings: `MeasureToolUI/Settings.cs`
+- UI Tests: `Tests/ScreenRuler.UITests/`
+- Test coverage:
+  - Bounds: `TestBounds.cs`
+  - Spacing: `TestSpacing.cs`
+  - Horizontal spacing: `TestSpacingHorizontal.cs`
+  - Vertical spacing: `TestSpacingVertical.cs`
+  - Shortcut activation: `TestShortcutActivation.cs`

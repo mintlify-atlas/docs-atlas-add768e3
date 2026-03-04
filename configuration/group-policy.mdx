@@ -1,0 +1,703 @@
+---
+title: 'Group Policy'
+description: 'Configure PowerToys for enterprise deployments using Group Policy Objects (GPO)'
+keywords: ['GPO', 'group policy', 'enterprise', 'ADMX', 'registry']
+---
+
+## Overview
+
+PowerToys provides comprehensive Group Policy support for enterprise environments, allowing administrators to control settings, enforce configurations, and restrict user modifications across an organization.
+
+<Info>
+GPO support was introduced in PowerToys v0.64.0 and has been continuously expanded with new policies in subsequent releases.
+</Info>
+
+## Policy files
+
+PowerToys Group Policy is defined using ADMX (Administrative Template) files located at:
+
+- **ADMX template:** `src/gpo/assets/PowerToys.admx`
+- **Language resources:** `src/gpo/assets/en-US/PowerToys.adml`
+
+### Installing policy files
+
+<Steps>
+  <Step title="Download policy files">
+    Obtain the `.admx` and `.adml` files from the PowerToys installation or source repository
+  </Step>
+  <Step title="Copy ADMX file">
+    Copy `PowerToys.admx` to:
+    - Local: `C:\Windows\PolicyDefinitions\`
+    - Domain: `\\domain\sysvol\domain\Policies\PolicyDefinitions\`
+  </Step>
+  <Step title="Copy ADML file">
+    Copy `PowerToys.adml` to the language folder:
+    - Local: `C:\Windows\PolicyDefinitions\en-US\`
+    - Domain: `\\domain\sysvol\domain\Policies\PolicyDefinitions\en-US\`
+  </Step>
+  <Step title="Refresh Group Policy">
+    Open Group Policy Editor (`gpedit.msc`) and navigate to:
+    
+    **Computer Configuration → Administrative Templates → Microsoft PowerToys**
+  </Step>
+</Steps>
+
+## Policy categories
+
+Policies are organized into logical categories defined at `PowerToys.admx:35-58`:
+
+<CardGroup cols={2}>
+  <Card title="General Settings" icon="gear">
+    Startup behavior, experimentation, diagnostics
+  </Card>
+  <Card title="Installer and Updates" icon="download">
+    Update notifications, automatic downloads
+  </Card>
+  <Card title="PowerToys Run" icon="terminal">
+    Plugin control and configuration
+  </Card>
+  <Card title="Advanced Paste" icon="clipboard">
+    AI model access control
+  </Card>
+  <Card title="Mouse Without Borders" icon="desktop">
+    Security and network policies
+  </Card>
+  <Card title="New+" icon="file-plus">
+    Template and context menu behavior
+  </Card>
+</CardGroup>
+
+## Global policies
+
+### Configure global utility enabled state
+
+**Policy name:** `ConfigureAllUtilityGlobalEnabledState`
+
+**Registry key:** `Software\Policies\PowerToys\ConfigureGlobalUtilityEnabledState`
+
+**Supported since:** v0.75.0
+
+Controls the enabled state for all PowerToys utilities simultaneously.
+
+<Tabs>
+  <Tab title="Enabled">
+    All utilities are forced on. Users cannot disable any utility.
+    
+    **Registry value:** `1` (REG_DWORD)
+  </Tab>
+  <Tab title="Disabled">
+    All utilities are forced off. Users cannot enable any utility.
+    
+    **Registry value:** `0` (REG_DWORD)
+  </Tab>
+  <Tab title="Not configured">
+    Users control utility enable/disable state.
+  </Tab>
+</Tabs>
+
+<Note>
+Individual utility policies override this global policy. This allows administrators to enable all utilities except specific ones.
+</Note>
+
+### Configure run at startup
+
+**Policy name:** `ConfigureRunAtStartup`
+
+**Registry key:** `Software\Policies\PowerToys\ConfigureRunAtStartup`
+
+**Supported since:** v0.89.0
+
+Controls whether PowerToys starts automatically when users log in.
+
+```registry
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\PowerToys]
+"ConfigureRunAtStartup"=dword:00000001
+```
+
+<Warning>
+This only controls PowerToys' internal startup mechanism (scheduled task). It does not prevent users from using other methods to auto-start PowerToys.
+</Warning>
+
+## Individual utility policies
+
+Each PowerToys utility has a dedicated enable/disable policy. All follow the same pattern:
+
+**Policy format:** `ConfigureEnabledUtility<UtilityName>`
+
+**Registry format:** `Software\Policies\PowerToys\ConfigureEnabledUtility<UtilityName>`
+
+### Complete utility list
+
+<AccordionGroup>
+  <Accordion title="Core utilities">
+    | Utility | Policy Name | Since Version |
+    |---------|-------------|---------------|
+    | Advanced Paste | `ConfigureEnabledUtilityAdvancedPaste` | v0.81.0 |
+    | Always On Top | `ConfigureEnabledUtilityAlwaysOnTop` | v0.64.0 |
+    | Awake | `ConfigureEnabledUtilityAwake` | v0.64.0 |
+    | Color Picker | `ConfigureEnabledUtilityColorPicker` | v0.64.0 |
+    | FancyZones | `ConfigureEnabledUtilityFancyZones` | v0.64.0 |
+    | File Locksmith | `ConfigureEnabledUtilityFileLocksmith` | v0.64.0 |
+    | Hosts File Editor | `ConfigureEnabledUtilityHostsFileEditor` | v0.64.0 |
+    | Image Resizer | `ConfigureEnabledUtilityImageResizer` | v0.64.0 |
+    | Keyboard Manager | `ConfigureEnabledUtilityKeyboardManager` | v0.64.0 |
+    | Peek | `ConfigureEnabledUtilityPeek` | v0.70.0 |
+    | PowerToys Run | `ConfigureEnabledUtilityPowerLauncher` | v0.64.0 |
+    | Power Rename | `ConfigureEnabledUtilityPowerRename` | v0.64.0 |
+    | Quick Accent | `ConfigureEnabledUtilityQuickAccent` | v0.64.0 |
+    | Screen Ruler | `ConfigureEnabledUtilityScreenRuler` | v0.64.0 |
+    | Shortcut Guide | `ConfigureEnabledUtilityShortcutGuide` | v0.64.0 |
+    | Text Extractor | `ConfigureEnabledUtilityTextExtractor` | v0.64.0 |
+  </Accordion>
+  
+  <Accordion title="File Explorer add-ons">
+    | Add-on | Policy Name | Since Version |
+    |--------|-------------|---------------|
+    | SVG Preview | `ConfigureEnabledUtilityFileExplorerSVGPreview` | v0.64.0 |
+    | Markdown Preview | `ConfigureEnabledUtilityFileExplorerMarkdownPreview` | v0.64.0 |
+    | Monaco Preview | `ConfigureEnabledUtilityFileExplorerMonacoPreview` | v0.64.0 |
+    | PDF Preview | `ConfigureEnabledUtilityFileExplorerPDFPreview` | v0.64.0 |
+    | Gcode Preview | `ConfigureEnabledUtilityFileExplorerGcodePreview` | v0.64.0 |
+    | Bgcode Preview | `ConfigureEnabledUtilityFileExplorerBgcodePreview` | v0.93.0 |
+    | QOI Preview | `ConfigureEnabledUtilityFileExplorerQOIPreview` | v0.76.0 |
+    | SVG Thumbnails | `ConfigureEnabledUtilityFileExplorerSVGThumbnails` | v0.64.0 |
+    | PDF Thumbnails | `ConfigureEnabledUtilityFileExplorerPDFThumbnails` | v0.64.0 |
+    | STL Thumbnails | `ConfigureEnabledUtilityFileExplorerSTLThumbnails` | v0.64.0 |
+  </Accordion>
+  
+  <Accordion title="Mouse utilities">
+    | Utility | Policy Name | Since Version |
+    |---------|-------------|---------------|
+    | Find My Mouse | `ConfigureEnabledUtilityFindMyMouse` | v0.64.0 |
+    | Mouse Highlighter | `ConfigureEnabledUtilityMouseHighlighter` | v0.64.0 |
+    | Mouse Crosshairs | `ConfigureEnabledUtilityMousePointerCrosshairs` | v0.64.0 |
+    | Mouse Jump | `ConfigureEnabledUtilityMouseJump` | v0.68.0 |
+    | Mouse Without Borders | `ConfigureEnabledUtilityMouseWithoutBorders` | v0.70.0 |
+    | Cursor Wrap | `ConfigureEnabledUtilityCursorWrap` | v0.97.0 |
+  </Accordion>
+  
+  <Accordion title="Developer tools">
+    | Utility | Policy Name | Since Version |
+    |---------|-------------|---------------|
+    | Command Not Found | `ConfigureEnabledUtilityCmdNotFound` | v0.77.0 |
+    | Command Palette | `ConfigureEnabledUtilityCmdPal` | v0.90.0 |
+    | Environment Variables | `ConfigureEnabledUtilityEnvironmentVariables` | v0.75.0 |
+    | Registry Preview | `ConfigureEnabledUtilityRegistryPreview` | v0.69.0 |
+  </Accordion>
+  
+  <Accordion title="Other utilities">
+    | Utility | Policy Name | Since Version |
+    |---------|-------------|---------------|
+    | Crop And Lock | `ConfigureEnabledUtilityCropAndLock` | v0.73.0 |
+    | Light Switch | `ConfigureEnabledUtilityLightSwitch` | v0.95.0 |
+    | New+ | `ConfigureEnabledUtilityNewPlus` | v0.85.0 |
+    | Workspaces | `ConfigureEnabledUtilityWorkspaces` | v0.84.0 |
+    | ZoomIt | `ConfigureEnabledUtilityZoomIt` | v0.88.0 |
+  </Accordion>
+</AccordionGroup>
+
+### Example: Disable Color Picker
+
+```registry
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\PowerToys]
+"ConfigureEnabledUtilityColorPicker"=dword:00000000
+```
+
+Or via PowerShell:
+
+```powershell
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\PowerToys" `
+  -Name "ConfigureEnabledUtilityColorPicker" `
+  -Value 0 -Type DWord
+```
+
+## Update and installer policies
+
+### Disable automatic update download
+
+**Policy name:** `DisableAutomaticUpdateDownload`
+
+**Registry key:** `Software\Policies\PowerToys\AutomaticUpdateDownloadDisabled`
+
+**Supported since:** v0.68.0
+
+Prevents PowerToys from automatically downloading updates. Updates are never downloaded on metered connections.
+
+### Disable update toast notifications
+
+**Policy name:** `DisableNewUpdateToast`
+
+**Registry key:** `Software\Policies\PowerToys\DisableNewUpdateAvailableToast`
+
+**Supported since:** v0.78.0
+
+Suppresses action center notifications about available updates.
+
+### Suspend update toasts
+
+**Policy name:** `SuspendNewUpdateToast`
+
+**Registry key:** `Software\Policies\PowerToys\SuspendNewUpdateAvailableToast`
+
+**Supported since:** v0.68.0
+
+Suspends update notifications for 2 minor versions. Major version notifications are always shown.
+
+<Info>
+Example: If running v0.60.0, notifications resume at v0.63.0
+</Info>
+
+### Disable per-user installation
+
+**Policy name:** `DisablePerUserInstallation`
+
+**Registry key:** `Software\Policies\PowerToys\PerUserInstallationDisabled`
+
+**Supported since:** v0.69.0
+
+**Scope:** Machine only
+
+Forces machine-wide installation, preventing per-user installs.
+
+### Hide What's New after updates
+
+**Policy name:** `DoNotShowWhatsNewAfterUpdates`
+
+**Registry key:** `Software\Policies\PowerToys\DoNotShowWhatsNewAfterUpdates`
+
+**Supported since:** v0.78.0
+
+Prevents the release notes window from appearing after updates.
+
+## PowerToys Run policies
+
+### Control all plugins
+
+**Policy name:** `PowerToysRunAllPluginsEnabledState`
+
+**Registry key:** `Software\Policies\PowerToys\PowerLauncherAllPluginsEnabledState`
+
+**Supported since:** v0.75.0
+
+Enables or disables all PowerToys Run plugins simultaneously.
+
+<Warning>
+Changes require restarting PowerToys Run to take effect.
+</Warning>
+
+### Control individual plugins
+
+**Policy name:** `PowerToysRunIndividualPluginEnabledState`
+
+**Registry key:** `Software\Policies\PowerToys\PowerLauncherIndividualPluginEnabledList`
+
+**Supported since:** v0.75.0
+
+Configures individual plugin states using a list of plugin IDs and values:
+
+- **Value 0:** Disabled
+- **Value 1:** Enabled  
+- **Value 2:** User control
+
+**Example configuration:**
+
+```
+Plugin ID: 791FC278BA414111B8D1886DFE447410
+Value: 0
+
+(Disables the Program plugin)
+```
+
+Plugin IDs are found in each plugin's `plugin.json` file.
+
+## Advanced Paste policies
+
+Advanced Paste includes policies to control AI model access for enterprise security.
+
+### Control online AI models
+
+**Policy name:** `AllowPowerToysAdvancedPasteOnlineAIModels`
+
+**Registry key:** `Software\Policies\PowerToys\AllowPowerToysAdvancedPasteOnlineAIModels`
+
+**Supported since:** v0.81.1
+
+Controls whether users can enable AI features and configure API keys.
+
+### Individual AI service policies
+
+Each AI service has a dedicated policy (supported since v0.96.0):
+
+<Tabs>
+  <Tab title="Cloud services">
+    - `AllowAdvancedPasteOpenAI` - OpenAI API access
+    - `AllowAdvancedPasteAzureOpenAI` - Azure OpenAI access
+    - `AllowAdvancedPasteAzureAIInference` - Azure AI Inference
+    - `AllowAdvancedPasteMistral` - Mistral AI
+    - `AllowAdvancedPasteGoogle` - Google AI
+    - `AllowAdvancedPasteAnthropic` - Anthropic Claude
+  </Tab>
+  <Tab title="Local services">
+    - `AllowAdvancedPasteOllama` - Ollama local models
+    - `AllowAdvancedPasteFoundryLocal` - Local Foundry models
+  </Tab>
+</Tabs>
+
+**Registry pattern:**
+
+```registry
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\PowerToys]
+"AllowAdvancedPasteOpenAI"=dword:00000000
+```
+
+## Mouse Without Borders policies
+
+Mouse Without Borders has extensive enterprise policies for security and connectivity.
+
+### Security policies
+
+<AccordionGroup>
+  <Accordion title="Clipboard sharing">
+    **Policy:** `MwbClipboardSharingEnabled`
+    
+    **Registry:** `Software\Policies\PowerToys\MwbClipboardSharingEnabled`
+    
+    **Since:** v0.83.0
+    
+    Controls whether clipboard can be shared between machines.
+  </Accordion>
+  
+  <Accordion title="File transfer">
+    **Policy:** `MwbFileTransferEnabled`
+    
+    **Registry:** `Software\Policies\PowerToys\MwbFileTransferEnabled`
+    
+    **Since:** v0.83.0
+    
+    Controls whether files can be transferred between machines.
+    
+    <Note>
+    File transfer requires clipboard sharing. Disabling clipboard sharing also disables file transfer.
+    </Note>
+  </Accordion>
+  
+  <Accordion title="Same subnet only">
+    **Policy:** `MwbSameSubnetOnly`
+    
+    **Registry:** `Software\Policies\PowerToys\MwbSameSubnetOnly`
+    
+    **Since:** v0.83.0
+    
+    When enabled, only allows connections from machines on the same subnet.
+  </Accordion>
+  
+  <Accordion title="Validate remote IP">
+    **Policy:** `MwbValidateRemoteIp`
+    
+    **Registry:** `Software\Policies\PowerToys\MwbValidateRemoteIp`
+    
+    **Since:** v0.83.0
+    
+    Enables IP address validation for remote connections.
+  </Accordion>
+</AccordionGroup>
+
+### Network policies
+
+**Policy:** `MwbPolicyDefinedIpMappingRules`
+
+**Registry:** `Software\Policies\PowerToys\MwbPolicyDefinedIpMappingRules`
+
+**Since:** v0.83.0
+
+Defines hostname-to-IP mappings for Mouse Without Borders. Each line can contain up to 65 characters.
+
+**Format:** `hostname IPv4/IPv6address`
+
+**Example:**
+
+```
+WORKSTATION1 192.168.1.100
+WORKSTATION2 192.168.1.101  
+SERVER1 fe80::1234:5678:90ab:cdef
+```
+
+You can disable user-defined mappings:
+
+**Policy:** `MwbDisableUserDefinedIpMappingRules`
+
+### Service mode
+
+**Policy:** `MwbAllowServiceMode`
+
+**Registry:** `Software\Policies\PowerToys\MwbAllowServiceMode`
+
+**Since:** v0.89.0
+
+**Scope:** Machine only
+
+Controls whether Mouse Without Borders can run as a Windows service.
+
+## New+ policies
+
+### Hide file extension
+
+**Policy:** `NewPlusHideTemplateFilenameExtension`
+
+**Registry:** `Software\Policies\PowerToys\NewPlusHideTemplateFilenameExtension`
+
+**Supported since:** v0.85.0
+
+Controls whether file extensions are hidden in template filenames.
+
+### Template variables
+
+**Policy:** `NewPlusReplaceVariablesInTemplateFilenames`
+
+**Registry:** `Software\Policies\PowerToys\NewPlusReplaceVariablesInTemplateFilenames`
+
+**Supported since:** v0.90.0
+
+Enables variable replacement in template filenames (e.g., date/time placeholders).
+
+### Hide built-in context menu
+
+**Policy:** `NewPlusHideBuiltInNewContextMenu`
+
+**Registry:** `Software\Policies\PowerToys\NewPlusHideBuiltInNewContextMenu`
+
+**Supported since:** v0.98.0
+
+Hides Windows' built-in "New" context menu, leaving only New+ menu.
+
+## General settings policies
+
+### Allow experimentation
+
+**Policy name:** `AllowExperimentation`
+
+**Registry key:** `Software\Policies\PowerToys\AllowExperimentation`
+
+**Supported since:** v0.68.0
+
+Controls whether users can opt into experimental features (Windows Insider builds only).
+
+### Allow diagnostic data
+
+**Policy name:** `AllowDiagnosticData`
+
+**Registry key:** `Software\Policies\PowerToys\AllowDataDiagnostics`
+
+**Supported since:** v0.86.0
+
+Controls whether diagnostic telemetry can be collected.
+
+## Policy precedence
+
+PowerToys policies follow a clear precedence hierarchy:
+
+<Steps>
+  <Step title="Individual module policy">
+    Highest priority. Example: `ConfigureEnabledUtilityColorPicker`
+  </Step>
+  <Step title="Global utility policy">
+    Medium priority. Example: `ConfigureAllUtilityGlobalEnabledState`
+  </Step>
+  <Step title="User preference">
+    Lowest priority. Settings in PowerToys Settings UI
+  </Step>
+</Steps>
+
+<Info>
+This allows flexible deployment strategies. For example:
+- Enable all utilities globally
+- Disable specific sensitive utilities (e.g., Screen Capture)
+- Let users control remaining utilities
+</Info>
+
+## Deploying policies at scale
+
+### Via Group Policy Management Console (GPMC)
+
+<Steps>
+  <Step title="Create or edit GPO">
+    In GPMC, create a new GPO or edit an existing one
+  </Step>
+  <Step title="Navigate to PowerToys policies">
+    Computer Configuration → Policies → Administrative Templates → Microsoft PowerToys
+  </Step>
+  <Step title="Configure desired policies">
+    Enable/disable policies as needed for your organization
+  </Step>
+  <Step title="Link GPO to OUs">
+    Link the GPO to appropriate Organizational Units
+  </Step>
+  <Step title="Force update">
+    On client machines: `gpupdate /force`
+  </Step>
+</Steps>
+
+### Via PowerShell
+
+For non-domain environments or testing:
+
+```powershell
+# Disable all utilities globally
+New-Item -Path "HKLM:\SOFTWARE\Policies\PowerToys" -Force
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\PowerToys" `
+  -Name "ConfigureGlobalUtilityEnabledState" `
+  -Value 0 -Type DWord
+
+# Enable PowerToys Run specifically  
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\PowerToys" `
+  -Name "ConfigureEnabledUtilityPowerLauncher" `
+  -Value 1 -Type DWord
+
+# Disable automatic updates
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\PowerToys" `
+  -Name "AutomaticUpdateDownloadDisabled" `
+  -Value 1 -Type DWord
+```
+
+### Via Intune/MDM
+
+PowerToys policies can be deployed via Intune using custom OMA-URI settings:
+
+```xml
+<Add>
+  <CmdID>1</CmdID>
+  <Item>
+    <Target>
+      <LocURI>./Device/Vendor/MSFT/Policy/Config/ADMX_PowerToys/ConfigureEnabledUtilityColorPicker</LocURI>
+    </Target>
+    <Meta>
+      <Format xmlns="syncml:metinf">int</Format>
+    </Meta>
+    <Data>0</Data>
+  </Item>
+</Add>
+```
+
+## Verifying policy application
+
+### Check registry
+
+Verify policies are applied correctly:
+
+```powershell
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\PowerToys"
+```
+
+### Check GPO results
+
+View effective policies on a machine:
+
+```cmd
+gpresult /h gpreport.html
+```
+
+Open `gpreport.html` and navigate to Computer Configuration → Administrative Templates → Microsoft PowerToys
+
+### Check PowerToys logs
+
+GPO policy evaluation is logged at:
+
+`%LOCALAPPDATA%\Microsoft\PowerToys\Logs\`
+
+Search for "GPO" in the Runner log files.
+
+### PowerToys Settings UI indicators
+
+When a policy is active, PowerToys Settings shows:
+
+- Disabled/grayed out controls
+- Information messages indicating GPO control
+- Shield icons for policy-managed settings
+
+## Common deployment scenarios
+
+### Scenario 1: Locked-down environment
+
+```registry
+; Disable all utilities by default
+[HKLM\SOFTWARE\Policies\PowerToys]
+"ConfigureGlobalUtilityEnabledState"=dword:00000000
+
+; Enable only approved utilities
+"ConfigureEnabledUtilityPowerLauncher"=dword:00000001
+"ConfigureEnabledUtilityFancyZones"=dword:00000001
+
+; Disable updates
+"AutomaticUpdateDownloadDisabled"=dword:00000001
+"DisableNewUpdateAvailableToast"=dword:00000001
+```
+
+### Scenario 2: Productivity focus
+
+```registry
+; Enable all utilities
+[HKLM\SOFTWARE\Policies\PowerToys]
+"ConfigureGlobalUtilityEnabledState"=dword:00000001
+
+; Disable distracting utilities
+"ConfigureEnabledUtilityMouseHighlighter"=dword:00000000
+"ConfigureEnabledUtilityZoomIt"=dword:00000000
+
+; Enable auto-updates
+"AutomaticUpdateDownloadDisabled"=dword:00000000
+```
+
+### Scenario 3: Developer workstations
+
+```registry
+; Enable development tools
+[HKLM\SOFTWARE\Policies\PowerToys]
+"ConfigureEnabledUtilityPowerLauncher"=dword:00000001
+"ConfigureEnabledUtilityCmdPal"=dword:00000001
+"ConfigureEnabledUtilityRegistryPreview"=dword:00000001
+"ConfigureEnabledUtilityEnvironmentVariables"=dword:00000001
+
+; Disable AI features for security
+"AllowPowerToysAdvancedPasteOnlineAIModels"=dword:00000000
+```
+
+## Troubleshooting
+
+### Policy not applying
+
+<AccordionGroup>
+  <Accordion title="GPO not linked correctly">
+    Verify GPO is linked to the correct OU and has proper permissions
+  </Accordion>
+  
+  <Accordion title="ADMX files not installed">
+    Ensure `PowerToys.admx` and `.adml` files are in PolicyDefinitions
+  </Accordion>
+  
+  <Accordion title="User vs Computer policy">
+    Most PowerToys policies are "Both" scope, but some (like `DisablePerUserInstallation`) are Computer-only
+  </Accordion>
+  
+  <Accordion title="PowerToys not restarted">
+    Some policies require restarting PowerToys to take effect
+  </Accordion>
+</AccordionGroup>
+
+### Conflicting policies
+
+If you have conflicting policies:
+
+1. Check precedence rules (individual > global > user)
+2. Use `gpresult` to see which policies are winning
+3. Review policy processing logs in Event Viewer
+
+## Related documentation
+
+<CardGroup cols={2}>
+  <Card title="Settings overview" icon="gear" href="/configuration/settings-overview">
+    Learn about PowerToys settings architecture
+  </Card>
+  <Card title="Keyboard shortcuts" icon="keyboard" href="/configuration/keyboard-shortcuts">
+    Configure keyboard shortcuts for utilities
+  </Card>
+</CardGroup>

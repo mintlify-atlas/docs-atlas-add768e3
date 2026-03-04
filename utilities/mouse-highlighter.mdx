@@ -1,0 +1,130 @@
+---
+title: Mouse Highlighter
+description: Add visual highlighting effects when you click your mouse buttons
+---
+
+## Overview
+
+Mouse Highlighter displays colorful visual effects around your cursor whenever you click the left or right mouse button. This makes mouse clicks more visible during presentations, screen recordings, or tutorials.
+
+<Note>
+  Mouse Highlighter is ideal for creating instructional videos or demonstrating software workflows where click visibility is important.
+</Note>
+
+## How to Activate
+
+### Toggle Highlighter
+
+Press the activation shortcut to enable or disable Mouse Highlighter:
+
+- **Default shortcut:** <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>
+
+### Auto-Activate Mode
+
+Enable "Auto-activate" in settings to have Mouse Highlighter start automatically when PowerToys launches.
+
+## Configuration Options
+
+### Activation Settings
+
+<ParamField path="activation_shortcut" type="hotkey" default="Win + Shift + H">
+  Keyboard shortcut to toggle Mouse Highlighter on and off
+</ParamField>
+
+<ParamField path="auto_activate" type="boolean" default="false">
+  Automatically enable Mouse Highlighter when PowerToys starts
+</ParamField>
+
+### Appearance Settings
+
+<ParamField path="left_button_click_color" type="color" default="#FFFF00A6">
+  Color of the highlight effect for left mouse button clicks (ARGB format with transparency)
+</ParamField>
+
+<ParamField path="right_button_click_color" type="color" default="#FF0099FF">
+  Color of the highlight effect for right mouse button clicks (ARGB format with transparency)
+</ParamField>
+
+<ParamField path="always_color" type="color" default="#00FFFFFF">
+  Color for continuous highlight mode (when spotlight mode is disabled). Default is fully transparent.
+</ParamField>
+
+<ParamField path="highlight_radius" type="number" default="20">
+  Radius of the highlight circle in pixels
+</ParamField>
+
+<ParamField path="highlight_fade_delay_ms" type="number" default="500">
+  Time in milliseconds before the highlight starts to fade after appearing
+</ParamField>
+
+<ParamField path="highlight_fade_duration_ms" type="number" default="250">
+  Duration in milliseconds for the fade-out animation
+</ParamField>
+
+### Display Mode
+
+<ParamField path="spotlight_mode" type="boolean" default="false">
+  Enable spotlight mode: shows highlight only during clicks. When disabled, shows a continuous highlight around the cursor using the "always_color" setting.
+</ParamField>
+
+## Use Cases
+
+### Tutorial Videos
+
+Make mouse clicks visible in screen recordings so viewers can follow along with your actions.
+
+```
+Scenario: Recording a software tutorial
+Setup: Enable auto-activate, set fade delay to 400ms
+Result: Each click shows a colored ring that helps viewers track actions
+```
+
+### Presentations
+
+Highlight where you're clicking during live demonstrations to help audience members follow along on large screens.
+
+<Tip>
+  Use contrasting colors for left and right clicks (yellow for left, blue for right) to make different interactions clear.
+</Tip>
+
+### Accessibility
+
+Help users with visual processing difficulties track mouse interactions by making clicks more prominent.
+
+### Software Testing
+
+Document bug reports or test cases with visible click indicators in screen captures.
+
+## Visual Customization Tips
+
+### High Contrast Environments
+
+For dark backgrounds:
+- Use bright colors: `#FFFFFF00` (yellow), `#FF00FFFF` (cyan)
+
+For light backgrounds:
+- Use darker, saturated colors: `#FFFF0000` (red), `#FF0000FF` (blue)
+
+### Transparency Settings
+
+The first two digits in the ARGB color format control transparency:
+- `FF` = fully opaque (255)
+- `CC` = 80% opaque (204)
+- `99` = 60% opaque (153)
+- `66` = 40% opaque (102)
+
+Example: `#99FF0000` = semi-transparent red
+
+### Performance Optimization
+
+For better performance on older systems:
+- Reduce fade duration to 100-150ms
+- Reduce highlight radius to 15-18 pixels
+- Use spotlight mode (shows highlights only on click)
+
+## Source Code Reference
+
+The Mouse Highlighter implementation can be found at:
+- Module interface: `src/modules/MouseUtils/MouseHighlighter/dllmain.cpp`
+- Settings parsing: Lines 191-407 in dllmain.cpp
+- Default hotkey: Line 404 (Win + Shift + H)

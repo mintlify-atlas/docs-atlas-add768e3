@@ -1,0 +1,907 @@
+---
+title: Settings System
+description: PowerToys settings architecture, IPC, and JSON schema
+---
+
+## Overview
+
+The PowerToys settings system provides a comprehensive framework for configuring modules through a WinUI 3-based Settings application. The system uses JSON-based configuration files, inter-process communication via Named Pipes, and a layered architecture to ensure settings are properly synchronized between the Settings UI, Runner, and individual modules.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Settings UI (WinUI 3)                       │
+│                                                               │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  ShellPage (Navigation)                            │  │
+│  │    • Dashboard                                      │  │
+│  │    • General Settings                              │  │
+│  │    • Module Settings Pages                         │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  ViewModels (MVVM Pattern)                         │  │
+│  │    • GeneralViewModel                              │  │
+│  │    • FancyZonesViewModel                           │  │
+│  │    • [Other Module ViewModels]                     │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Settings.UI.Library                               │  │
+│  │    • Settings data models                          │  │
+│  │    • JSON serialization                            │  │
+│  │    • SettingsUtils helpers                         │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                         │
+                         │ Named Pipes (TwoWayPipeMessageIPC)
+                         │ JSON Messages
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│              PowerToys Runner (PowerToys.exe)              │
+│    • Receives settings via IPC                            │
+│    • Calls module->set_config()                           │
+│    • Manages module lifecycle                             │
+└─────────────────────────────────────────────────────────────┘
+                         │
+                         │ Direct function calls
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Module DLLs                               │
+│    • Implement PowertoyModuleIface                        │
+│    • Receive config via set_config()                      │
+│    • Apply settings to module behavior                    │
+└─────────────────────────────────────────────────────────────┘
+                         │
+                         │ Read/Write
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│         %LOCALAPPDATA%\Microsoft\PowerToys\              │
+│                                                           │
+│    settings.json           - General settings             │
+│    FancyZones/settings.json - Module-specific settings    │
+│    ColorPicker/settings.json                              │
+│    [...]                                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Reference:** `doc/devdocs/core/settings/readme.md`
+
+## JSON Configuration Files
+
+Settings are stored as JSON files in `%LOCALAPPDATA%\Microsoft\PowerToys\`.
+
+### General Settings
+
+**File:** `settings.json`
+
+```json
+{
+  "version": "1.0",
+  "name": "PowerToys",
+  "properties": {
+    "startup": true,
+    "theme": "dark",
+    "showNewUpdatesToastNotification": true,
+    "autoDownloadUpdates": false,
+    "run_elevated": false,
+    "enable_warnings_elevated_apps": true,
+    "is_elevated": false
+  },
+  "enabled": {
+    "FancyZones": true,
+    "Color Picker": true,
+    "PowerRename": true
+  }
+}
+```
+
+### Module Settings
+
+**File:** `<ModuleName>/settings.json`
+
+```json
+{
+  "version": "1.0",
+  "name": "FancyZones",
+  "properties": {
+    "fancyzones_shiftDrag": {
+      "value": true
+    },
+    "fancyzones_mouseSwitch": {
+      "value": false
+    },
+    "fancyzones_zoneCount": {
+      "value": 3
+    },
+    "fancyzones_highlight_opacity": {
+      "value": 50
+    }
+  }
+}
+```
+
+**JSON Schema:**
+- `version`: Schema version (for migration support)
+- `name`: Module identifier
+- `properties`: Object containing all module settings
+  - Each setting has a `value` field
+  - Settings can be boolean, number, string, or object
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:1-29`
+
+## IPC Communication
+
+### Pipe Initialization
+
+The Settings UI and Runner establish a bi-directional Named Pipe connection on startup.
+
+**Settings UI Side (C#):**
+
+```csharp
+// From src/settings-ui/Settings.UI/SettingsXAML/MainWindow.xaml.cs
+
+using Microsoft.PowerToys.Settings.UI.Library;
+
+public MainWindow()
+{
+    // Create IPC manager with pipe names from command-line args
+    ipcmanager = new TwoWayPipeMessageIPCManaged(
+        cmdArgs[(int)Arguments.SettingsPipeName],   // Incoming pipe
+        cmdArgs[(int)Arguments.PTPipeName],         // Outgoing pipe
+        (string message) => {
+            // Handle messages from Runner
+            if (IPCMessageReceivedCallback != null && message.Length > 0) {
+                IPCMessageReceivedCallback(message);
+            }
+        }
+    );
+    
+    ipcmanager.Start();
+}
+```
+
+**Runner Side (C++):**
+
+```cpp
+// From src/runner/settings_window.cpp
+
+void initialize_settings_ipc()
+{
+    std::wstring runner_pipe = L"\\\\.\\pipe\\powertoys_runner_" + 
+                               std::to_wstring(GetCurrentProcessId());
+    std::wstring settings_pipe = L"\\\\.\\pipe\\powertoys_settings_" + 
+                                 std::to_wstring(GetCurrentProcessId());
+    
+    current_settings_ipc = new TwoWayPipeMessageIPC(
+        runner_pipe,
+        settings_pipe,
+        [](const std::wstring& message) {
+            dispatch_json_message_to_main_thread(message);
+        }
+    );
+    
+    current_settings_ipc->start();
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/runner-ipc.md:5-8`, `doc/devdocs/core/runner.md:76-91`
+
+### Message Types
+
+The Settings UI defines three types of IPC delegates for communication:
+
+1. **SendDefaultMessage** - Used by ViewModels to send settings changes
+2. **RestartAsAdmin** - Request elevation
+3. **CheckForUpdates** - Trigger update check
+
+**Reference:** `doc/devdocs/core/settings/runner-ipc.md:10-14`
+
+### Sending Settings to Runner
+
+**General Settings Message:**
+
+```json
+{
+  "general": {
+    "startup": true,
+    "theme": "dark",
+    "run_elevated": false
+  }
+}
+```
+
+**Module Settings Message:**
+
+```json
+{
+  "powertoy": "FancyZones",
+  "version": "1.0",
+  "name": "FancyZones",
+  "properties": {
+    "fancyzones_shiftDrag": {
+      "value": true
+    },
+    "fancyzones_zoneCount": {
+      "value": 3
+    }
+  }
+}
+```
+
+**Implementation:**
+
+```csharp
+// From a ViewModel
+public void UpdateSettings()
+{
+    // Create settings object
+    var settingsObject = new {
+        powertoy = "FancyZones",
+        version = "1.0",
+        name = "FancyZones",
+        properties = new {
+            fancyzones_shiftDrag = new { value = ShiftDragEnabled },
+            fancyzones_zoneCount = new { value = ZoneCount }
+        }
+    };
+    
+    // Serialize to JSON
+    string json = JsonSerializer.Serialize(settingsObject);
+    
+    // Send via IPC
+    ShellPage.DefaultSndMSGCallBack(json);
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/runner-ipc.md:16-20`
+
+### Receiving Messages from Runner
+
+**Setup Handler List:**
+
+```csharp
+// From ShellPage.xaml.cs
+
+Program.IPCMessageReceivedCallback = (string msg) =>
+{
+    if (ShellPage.ShellHandler.IPCResponseHandleList != null)
+    {
+        try
+        {
+            JsonObject json = JsonObject.Parse(msg);
+            
+            // Call all registered handlers
+            foreach (Action<JsonObject> handle in 
+                     ShellPage.ShellHandler.IPCResponseHandleList)
+            {
+                handle(json);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Failed to process IPC message", ex);
+        }
+    }
+};
+```
+
+**Message Handling Example:**
+
+```csharp
+// In a ViewModel or Page
+public void RegisterForIPCMessages()
+{
+    // Add handler to the list
+    ShellPage.ShellHandler.IPCResponseHandleList.Add((JsonObject json) =>
+    {
+        if (json.ContainsKey("UpdateAvailable"))
+        {
+            var updateInfo = json.GetNamedObject("UpdateAvailable");
+            string version = updateInfo.GetNamedString("version", "");
+            
+            // Show update notification
+            ShowUpdateNotification(version);
+        }
+    });
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/runner-ipc.md:21-47`
+
+## Settings Implementation in Modules
+
+### C++ Module Settings
+
+**Reading Settings:**
+
+```cpp
+#include <common/SettingsAPI/settings_objects.h>
+#include <common/SettingsAPI/settings_helpers.h>
+
+void MyModule::init_settings()
+{
+    try {
+        // Load settings from file
+        PowerToysSettings::PowerToyValues settings =
+            PowerToysSettings::PowerToyValues::load_from_settings_file(get_key());
+        
+        // Parse settings
+        auto settingsObject = settings.get_raw_json();
+        if (settingsObject.HasKey(L"properties")) {
+            auto properties = settingsObject.GetNamedObject(L"properties");
+            
+            // Boolean setting
+            if (properties.HasKey(L"my_bool_option")) {
+                auto option = properties.GetNamedObject(L"my_bool_option");
+                m_boolOption = option.GetNamedBoolean(L"value", true);
+            }
+            
+            // Numeric setting
+            if (properties.HasKey(L"my_number_option")) {
+                auto option = properties.GetNamedObject(L"my_number_option");
+                m_numberOption = static_cast<int>(
+                    option.GetNamedNumber(L"value", 50));
+            }
+            
+            // String setting
+            if (properties.HasKey(L"my_string_option")) {
+                auto option = properties.GetNamedObject(L"my_string_option");
+                m_stringOption = option.GetNamedString(L"value", L"default").c_str();
+            }
+        }
+    }
+    catch (std::exception& e) {
+        Logger::error("Failed to load settings: {}", e.what());
+    }
+}
+```
+
+**Writing Settings:**
+
+```cpp
+virtual void set_config(const wchar_t* config) override
+{
+    try {
+        // Parse JSON config
+        PowerToysSettings::PowerToyValues values =
+            PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+        
+        // Parse and store settings
+        parse_settings(values);
+        
+        // Apply settings to running module
+        apply_settings();
+        
+        // Persist to disk
+        values.save_to_settings_file();
+    }
+    catch (std::exception& e) {
+        Logger::error("Failed to set config: {}", e.what());
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:5-29`
+
+### C# Module Settings
+
+**Settings Data Model:**
+
+```csharp
+using Microsoft.PowerToys.Settings.UI.Library;
+using System.Text.Json.Serialization;
+
+public class MyModuleSettings : BasePTModuleSettings
+{
+    [JsonPropertyName("bool_option")]
+    public bool BoolOption { get; set; } = true;
+    
+    [JsonPropertyName("number_option")]
+    public int NumberOption { get; set; } = 50;
+    
+    [JsonPropertyName("string_option")]
+    public string StringOption { get; set; } = "default";
+    
+    public MyModuleSettings()
+    {
+        Name = "MyModule";
+        Version = "1.0";
+    }
+}
+```
+
+**Reading Settings:**
+
+```csharp
+using Microsoft.PowerToys.Settings.UI.Library;
+
+public class MyModule
+{
+    private MyModuleSettings _settings;
+    
+    public void LoadSettings()
+    {
+        try
+        {
+            _settings = SettingsUtils.GetSettings<MyModuleSettings>("MyModule");
+            
+            if (_settings == null)
+            {
+                _settings = new MyModuleSettings();
+            }
+            
+            ApplySettings();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Failed to load settings", ex);
+            _settings = new MyModuleSettings();
+        }
+    }
+    
+    private void ApplySettings()
+    {
+        // Apply settings to module behavior
+    }
+}
+```
+
+**Writing Settings:**
+
+```csharp
+public void SaveSettings()
+{
+    try
+    {
+        string json = JsonSerializer.Serialize(_settings);
+        SettingsUtils.SaveSettings(json, "MyModule");
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError("Failed to save settings", ex);
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:31-54`
+
+## Settings UI Implementation
+
+### 1. Settings Data Model
+
+Define your module's settings class in `Settings.UI.Library`:
+
+```csharp
+// src/settings-ui/Settings.UI.Library/MyModuleSettings.cs
+
+using System.Text.Json.Serialization;
+using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+
+namespace Microsoft.PowerToys.Settings.UI.Library
+{
+    public class MyModuleSettings : BasePTModuleSettings, ISettingsConfig
+    {
+        public const string ModuleName = "MyModule";
+        
+        [JsonPropertyName("properties")]
+        public MyModuleProperties Properties { get; set; }
+        
+        public MyModuleSettings()
+        {
+            Name = ModuleName;
+            Version = "1.0";
+            Properties = new MyModuleProperties();
+        }
+        
+        public string GetModuleName() => Name;
+        
+        public bool UpgradeSettingsConfiguration()
+        {
+            // Implement any settings migration logic
+            return false;
+        }
+    }
+    
+    public class MyModuleProperties
+    {
+        [JsonPropertyName("bool_option")]
+        public BoolProperty BoolOption { get; set; } = new BoolProperty(true);
+        
+        [JsonPropertyName("number_option")]
+        public IntProperty NumberOption { get; set; } = new IntProperty(50);
+        
+        [JsonPropertyName("string_option")]
+        public StringProperty StringOption { get; set; } = new StringProperty("default");
+        
+        [JsonPropertyName("activation_shortcut")]
+        public HotkeySettings ActivationShortcut { get; set; } = 
+            new HotkeySettings(true, false, false, true, 0x4D); // Win+Alt+M
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:131-136`
+
+### 2. ViewModel
+
+Create a ViewModel that inherits from `Observable` and manages the settings:
+
+```csharp
+// src/settings-ui/Settings.UI/ViewModels/MyModuleViewModel.cs
+
+using Microsoft.PowerToys.Settings.UI.Library;
+using Microsoft.UI.Xaml;
+using System.ComponentModel;
+
+namespace Microsoft.PowerToys.Settings.UI.ViewModels
+{
+    public class MyModuleViewModel : Observable
+    {
+        private MyModuleSettings _settings;
+        private Func<string, int> _sendConfigMSG;
+        
+        public MyModuleViewModel(
+            ISettingsRepository<GeneralSettings> settingsRepository,
+            Func<string, int> ipcMSGCallBackFunc)
+        {
+            _sendConfigMSG = ipcMSGCallBackFunc;
+            
+            // Load settings
+            if (settingsRepository == null)
+            {
+                _settings = new MyModuleSettings();
+            }
+            else
+            {
+                _settings = settingsRepository.SettingsConfig;
+            }
+        }
+        
+        // Property for UI binding
+        public bool BoolOption
+        {
+            get => _settings.Properties.BoolOption.Value;
+            set
+            {
+                if (_settings.Properties.BoolOption.Value != value)
+                {
+                    _settings.Properties.BoolOption.Value = value;
+                    OnPropertyChanged(nameof(BoolOption));
+                    
+                    // Send to Runner
+                    NotifySettingsChanged();
+                }
+            }
+        }
+        
+        public int NumberOption
+        {
+            get => _settings.Properties.NumberOption.Value;
+            set
+            {
+                if (_settings.Properties.NumberOption.Value != value)
+                {
+                    _settings.Properties.NumberOption.Value = value;
+                    OnPropertyChanged(nameof(NumberOption));
+                    NotifySettingsChanged();
+                }
+            }
+        }
+        
+        private void NotifySettingsChanged()
+        {
+            // Serialize settings to JSON
+            string json = JsonSerializer.Serialize(_settings);
+            
+            // Send to Runner via IPC
+            _sendConfigMSG(json);
+        }
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:151-156`, `doc/devdocs/core/settings/viewmodels.md`
+
+### 3. Settings Page (XAML)
+
+Create a settings page with UI controls bound to the ViewModel:
+
+```xml
+<!-- src/settings-ui/Settings.UI/SettingsXAML/Views/MyModule.xaml -->
+
+<Page
+    x:Class="Microsoft.PowerToys.Settings.UI.Views.MyModulePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls">
+    
+    <controls:SettingsPageControl
+        x:Uid="MyModule"
+        ModuleImageSource="ms-appx:///Assets/Modules/MyModule.png">
+        
+        <controls:SettingsPageControl.ModuleContent>
+            <StackPanel Orientation="Vertical" Spacing="8">
+                
+                <!-- Boolean Option -->
+                <controls:Setting
+                    x:Uid="MyModule_BoolOption"
+                    Icon="&#xE8A1;">
+                    <ToggleSwitch 
+                        IsOn="{x:Bind ViewModel.BoolOption, Mode=TwoWay}" />
+                </controls:Setting>
+                
+                <!-- Number Option -->
+                <controls:Setting
+                    x:Uid="MyModule_NumberOption"
+                    Icon="&#xE9A2;">
+                    <controls:SettingsNumberBox
+                        Value="{x:Bind ViewModel.NumberOption, Mode=TwoWay}"
+                        Minimum="1"
+                        Maximum="100" />
+                </controls:Setting>
+                
+                <!-- Hotkey Setting -->
+                <controls:Setting
+                    x:Uid="MyModule_ActivationShortcut"
+                    Icon="&#xE92E;">
+                    <controls:ShortcutControl
+                        HotkeySettings="{x:Bind ViewModel.ActivationShortcut, Mode=TwoWay}" />
+                </controls:Setting>
+                
+            </StackPanel>
+        </controls:SettingsPageControl.ModuleContent>
+        
+    </controls:SettingsPageControl>
+</Page>
+```
+
+**Code-behind:**
+
+```csharp
+// src/settings-ui/Settings.UI/SettingsXAML/Views/MyModule.xaml.cs
+
+namespace Microsoft.PowerToys.Settings.UI.Views
+{
+    public sealed partial class MyModulePage : Page
+    {
+        public MyModuleViewModel ViewModel { get; set; }
+        
+        public MyModulePage()
+        {
+            this.InitializeComponent();
+            
+            var settingsRepository = App.GetService<ISettingsRepository<GeneralSettings>>();
+            var sendConfigMSG = App.GetService<Func<string, int>>();
+            
+            ViewModel = new MyModuleViewModel(settingsRepository, sendConfigMSG);
+            DataContext = ViewModel;
+        }
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:147-150`, `doc/devdocs/core/settings/ui-architecture.md`
+
+### 4. Add to Navigation
+
+Register your settings page in `ShellPage.xaml`:
+
+```xml
+<!-- src/settings-ui/Settings.UI/SettingsXAML/Views/ShellPage.xaml -->
+
+<NavigationView>
+    <NavigationView.MenuItems>
+        <!-- ... other items ... -->
+        
+        <NavigationViewItem
+            x:Uid="Shell_MyModule"
+            helpers:NavHelper.NavigateTo="views:MyModulePage"
+            Icon="&#xE74C;" />
+            
+    </NavigationView.MenuItems>
+</NavigationView>
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:140-144`
+
+## Hotkey Conflict Detection
+
+The Settings UI implements hotkey conflict detection to warn users when multiple modules use the same hotkey.
+
+### Implementation Steps
+
+**1. Module Interface - Return Hotkeys:**
+
+```cpp
+virtual size_t get_hotkeys(Hotkey* buffer, size_t buffer_size) override
+{
+    if (buffer && buffer_size >= 2) {
+        buffer[0] = m_hotkey1;
+        buffer[0].id = 0;
+        buffer[1] = m_hotkey2;
+        buffer[1].id = 1;
+    }
+    return 2;
+}
+```
+
+**Important:** The order of hotkeys must be consistent across all layers.
+
+**2. Settings Model - Implement IHotkeyConfig:**
+
+```csharp
+public class MyModuleSettings : BasePTModuleSettings, IHotkeyConfig
+{
+    public HotkeyAccessor[] GetAllHotkeyAccessors()
+    {
+        return new HotkeyAccessor[]
+        {
+            new HotkeyAccessor(
+                () => Properties.Hotkey1,
+                (value) => Properties.Hotkey1 = value,
+                "MyModule_Hotkey1_Description"),
+            new HotkeyAccessor(
+                () => Properties.Hotkey2,
+                (value) => Properties.Hotkey2 = value,
+                "MyModule_Hotkey2_Description")
+        };
+    }
+}
+```
+
+**3. ViewModel - Return All Hotkeys:**
+
+```csharp
+public class MyModuleViewModel : PageViewModelBase
+{
+    public override Dictionary<string, HotkeySettings[]> GetAllHotkeySettings()
+    {
+        return new Dictionary<string, HotkeySettings[]>
+        {
+            {
+                "MyModule",
+                new HotkeySettings[]
+                {
+                    _settings.Properties.Hotkey1,
+                    _settings.Properties.Hotkey2
+                }
+            }
+        };
+    }
+}
+```
+
+**4. Page - Call OnPageLoaded:**
+
+```csharp
+public MyModulePage()
+{
+    InitializeComponent();
+    Loaded += (s, e) => ViewModel.OnPageLoaded();
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:74-108`
+
+## Alternative Communication Patterns
+
+### File-Based Settings (PowerToys Run)
+
+Some modules watch settings files directly instead of using IPC:
+
+```csharp
+public class PowerToysRun
+{
+    private FileSystemWatcher _settingsWatcher;
+    
+    public void InitializeSettingsWatcher()
+    {
+        string settingsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Microsoft", "PowerToys", "Launcher");
+        
+        _settingsWatcher = new FileSystemWatcher(settingsPath, "settings.json");
+        _settingsWatcher.Changed += OnSettingsFileChanged;
+        _settingsWatcher.EnableRaisingEvents = true;
+    }
+    
+    private void OnSettingsFileChanged(object sender, FileSystemEventArgs e)
+    {
+        // Reload settings from file
+        LoadSettings();
+        ApplySettings();
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/communication-with-modules.md:7-10`
+
+### Shared File with Mutex (Keyboard Manager)
+
+Keyboard Manager uses a named mutex for safe concurrent access:
+
+```cpp
+void KeyboardManager::LoadSettings()
+{
+    // Open named mutex
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, 
+                               L"PowerToys.KeyboardManager.SettingsMutex");
+    
+    if (hMutex == NULL) {
+        // Mutex doesn't exist - module not running
+        return;
+    }
+    
+    // Wait for mutex
+    WaitForSingleObject(hMutex, INFINITE);
+    
+    try {
+        // Read settings file
+        std::wstring settingsPath = GetSettingsFilePath();
+        std::ifstream file(settingsPath);
+        // ... parse JSON ...
+    }
+    catch (...) {
+        // Handle errors
+    }
+    
+    // Release mutex
+    ReleaseMutex(hMutex);
+    CloseHandle(hMutex);
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/communication-with-modules.md:12-16`
+
+## Debugging Settings
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Settings not saving | File permissions | Check write access to `%LOCALAPPDATA%\Microsoft\PowerToys\` |
+| Settings not applied | IPC not working | Check Named Pipe connection, look for errors in logs |
+| Incorrect values | JSON parsing error | Validate JSON format, check for type mismatches |
+| Conflicts with other processes | File locks | Use mutex for shared files, check for file handles |
+
+### Debug Steps
+
+1. **Check settings files** in `%LOCALAPPDATA%\Microsoft\PowerToys\`
+   - Verify JSON is well-formed
+   - Check that values are being written
+
+2. **Monitor IPC communication**
+   - Set breakpoints in Settings UI's `DefaultSndMSGCallBack`
+   - Set breakpoints in Runner's message dispatcher
+   - Log JSON messages being sent/received
+
+3. **Check module's `set_config`**
+   - Verify module receives configuration
+   - Check JSON parsing logic
+   - Ensure settings are applied to module state
+
+4. **Review logs**
+   - Settings UI logs: `%LOCALAPPDATA%\Microsoft\PowerToys\logs\Settings\`
+   - Runner logs: `%LOCALAPPDATA%\Microsoft\PowerToys\logs\`
+   - Module logs: Look for module-specific log files
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:109-126`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Module Interface" icon="plug" href="./module-interface">
+    Implement the module interface with settings support
+  </Card>
+  <Card title="Runner Implementation" icon="gears" href="./runner">
+    Understand how the Runner processes settings
+  </Card>
+  <Card title="Architecture Overview" icon="sitemap" href="./architecture-overview">
+    High-level system architecture
+  </Card>
+  <Card title="UI Architecture" icon="window" href="./ui-architecture">
+    Settings UI architecture and patterns
+  </Card>
+</CardGroup>

@@ -1,0 +1,297 @@
+---
+title: Quick Accent
+description: Quickly insert accented characters and special symbols while typing
+---
+
+## Overview
+
+Quick Accent (also known as PowerAccent) allows you to easily insert accented characters, diacritics, and special symbols by pressing and holding letter keys. A selection toolbar appears showing available accent variations for the pressed key.
+
+<Note>
+  Quick Accent is essential for typing in multiple languages, especially those that use diacritical marks like Spanish, French, German, Portuguese, and many others.
+</Note>
+
+## How to Activate
+
+Quick Accent activates automatically when you press and hold a letter key that has accent variations:
+
+<Steps>
+  <Step title="Press and Hold Letter">
+    Press and hold a letter key (e.g., <kbd>A</kbd>, <kbd>E</kbd>, <kbd>O</kbd>) for the configured duration
+  </Step>
+  <Step title="View Options">
+    A toolbar appears above the cursor showing available accented variants
+  </Step>
+  <Step title="Select Character">
+    Press <kbd>Space</kbd>, <kbd>←</kbd>, or <kbd>→</kbd> to cycle through options, or click with mouse
+  </Step>
+  <Step title="Insert">
+    Release the Space key or press Enter to insert the selected character
+  </Step>
+</Steps>
+
+## Configuration Options
+
+### Language Selection
+
+<ParamField path="SelectedLang" type="enum" default="ALL">
+  Choose which language's accent characters to display:
+  - **ALL:** Show accents from all supported languages
+  - **Catalan**
+  - **Croatian**  
+  - **Czech**
+  - **Dutch**
+  - **Estonian**
+  - **French**
+  - **Gàidhlig** (Scottish Gaelic)
+  - **Galician**
+  - **German**
+  - **Hebrew**
+  - **Hungarian**
+  - **Icelandic**
+  - **Italian**
+  - **Kurdish**
+  - **Lithuanian**
+  - **Macedonian**
+  - **Māori**
+  - **Norwegian**
+  - **Polish**
+  - **Portuguese**
+  - **Romanian**
+  - **Serbian (Cyrillic)**
+  - **Serbian (Latin)**
+  - **Slovak**
+  - **Spanish**
+  - **Swedish**
+  - **Turkish**
+  - **Welsh**
+  
+  And many more...
+</ParamField>
+
+### Toolbar Behavior
+
+<ParamField path="InputTime" type="number" default="300">
+  Time in milliseconds to hold a key before the accent toolbar appears (default: 300ms)
+</ParamField>
+
+<ParamField path="Position" type="enum" default="Top">
+  Position of the accent selection toolbar relative to the cursor:
+  - **Top:** Above the cursor
+  - **Bottom:** Below the cursor
+  - **Left:** To the left of the cursor
+  - **Right:** To the right of the cursor
+  - **Center:** Centered on screen
+</ParamField>
+
+<ParamField path="StartSelectionFromTheLeft" type="boolean" default="false">
+  When true, the first character in the toolbar is pre-selected. When false, selection starts from the middle.
+</ParamField>
+
+### Advanced Options
+
+<ParamField path="ShowUnicodeDescription" type="boolean" default="false">
+  Display Unicode character information (code point and name) below each accent option in the toolbar
+</ParamField>
+
+<ParamField path="SortByUsageFrequency" type="boolean" default="false">
+  Automatically reorder accent options based on how frequently you use them. Most-used characters appear first.
+</ParamField>
+
+## Available Characters
+
+Quick Accent supports a wide range of accented characters. Here are some examples:
+
+### Common Vowels
+
+| Key | Available Accents |
+|-----|------------------|
+| A | á, à, ä, â, ã, å, ā, ă, ą, ǎ, æ, and more |
+| E | é, è, ê, ë, ē, ė, ę, ě, and more |
+| I | í, ì, î, ï, ī, į, ı, and more |
+| O | ó, ò, ô, ö, õ, ō, ő, ø, œ, and more |
+| U | ú, ù, û, ü, ū, ű, ų, ů, and more |
+| Y | ý, ÿ, ŷ, and more |
+
+### Common Consonants
+
+| Key | Available Accents |
+|-----|------------------|
+| C | ć, č, ç, ĉ, and more |
+| N | ñ, ń, ň, and more |
+| S | ś, š, ş, ș, and more |
+| Z | ź, ż, ž, and more |
+
+### Special Characters
+
+| Key | Available Symbols |
+|-----|------------------|
+| O | °, ø, œ, ō (also includes dashes when ShowUnicodeDescription is enabled) |
+| - | Various dash types (em dash, en dash, etc.) |
+
+<Note>
+  The exact characters available depend on your selected language setting. Choose "ALL" to see the complete set.
+</Note>
+
+## Use Cases
+
+### Multilingual Typing
+
+Type in multiple languages without switching keyboard layouts.
+
+```
+Scenario: Writing an email in Spanish
+Action: Hold 'n' key to access ñ for "mañana"
+Result: Quickly insert ñ without changing keyboard layout
+```
+
+### Academic Writing
+
+Insert proper diacritical marks in citations, foreign terms, and names.
+
+<Tip>
+  Enable "Sort by usage frequency" to automatically prioritize the accents you use most often.
+</Tip>
+
+### Language Learning
+
+Practice typing in foreign languages with correct accent marks:
+- Learn proper spelling and pronunciation
+- Type vocabulary exercises accurately
+- Communicate with native speakers correctly
+
+### Professional Communication
+
+Ensure names and places are spelled correctly:
+- Client names with special characters
+- International locations
+- Cultural sensitivity in correspondence
+
+## Navigation Methods
+
+### Keyboard Navigation
+
+| Action | Keys |
+|--------|------|
+| Show toolbar | Hold letter key |
+| Select next character (right) | <kbd>Space</kbd> or <kbd>→</kbd> |
+| Select previous character (left) | <kbd>Shift</kbd> + <kbd>Space</kbd> or <kbd>←</kbd> |
+| Insert selected character | Release <kbd>Space</kbd> or <kbd>Enter</kbd> |
+| Insert space (cancel) | Release held letter key without selecting |
+| Cancel | <kbd>Esc</kbd> |
+
+### Mouse Navigation
+
+- Click any character in the toolbar to insert it immediately
+- Hover to preview character names (when ShowUnicodeDescription is enabled)
+
+## Performance Tips
+
+### Reduce Input Delay
+
+If the toolbar appears too slowly:
+- Lower the `InputTime` setting to 200ms or 250ms
+- Note: Very low values (less than 150ms) may cause accidental activations
+
+### Optimize for Specific Language
+
+Instead of using "ALL" languages:
+- Select only the language(s) you actively use
+- Reduces visual clutter in the toolbar
+- Faster character selection with fewer options
+
+### Enable Usage Frequency Sorting
+
+If you frequently use the same accents:
+- Enable `SortByUsageFrequency`
+- Your most-used characters will appear first automatically
+- Reduces navigation time
+
+## Technical Details
+
+### Character Database
+
+Quick Accent includes comprehensive character mappings in:
+- `PowerAccent.Core/Languages.cs` - Over 43,000 lines of character definitions
+- Supports 40+ languages and writing systems
+- Unicode-based character representation
+
+### Keyboard Hook Architecture
+
+- Low-level keyboard hook captures key presses
+- Timer-based activation prevents accidental triggers
+- Non-intrusive: doesn't interfere with normal typing
+- Works in any application (text editors, browsers, etc.)
+
+### Rendering
+
+- WPF-based toolbar overlay
+- DPI-aware for high-resolution displays
+- Follows cursor position dynamically
+- Hardware-accelerated rendering
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Toolbar doesn't appear when holding key">
+    - Check that Quick Accent is enabled in PowerToys Settings
+    - Verify the key has accent options in your selected language
+    - Try increasing `InputTime` if you're releasing too quickly
+    - Ensure no other application is capturing keyboard input
+  </Accordion>
+  
+  <Accordion title="Wrong characters appear in toolbar">
+    - Check your selected language setting
+    - If using "ALL", consider switching to specific language(s)
+    - Verify keyboard layout in Windows settings
+  </Accordion>
+  
+  <Accordion title="Accents insert in wrong location">
+    - Quick Accent inserts at current cursor position
+    - Ensure correct application has focus
+    - Some applications may not support direct character insertion
+  </Accordion>
+  
+  <Accordion title="Toolbar position is awkward">
+    - Change `Position` setting (Top, Bottom, Left, Right, Center)
+    - Top position is usually best for most scenarios
+    - Center position works well for touch screen users
+  </Accordion>
+  
+  <Accordion title="Performance issues or lag">
+    - Select specific language instead of "ALL"
+    - Reduce number of enabled languages
+    - Check for Windows performance issues
+    - Restart PowerToys
+  </Accordion>
+</AccordionGroup>
+
+## Accessibility Features
+
+### Visual Enhancements
+
+- Large, clear character display in toolbar
+- High-contrast compatible
+- Configurable positioning for visibility
+
+### Unicode Information
+
+Enable `ShowUnicodeDescription` to see:
+- Unicode code point for each character
+- Official character name
+- Helpful for learning and reference
+
+### Motor Accessibility
+
+- Mouse clicking supported (no keyboard required)
+- Adjustable hold duration for different motor abilities
+- Visual feedback for selected character
+
+## Source Code Reference
+
+The Quick Accent implementation can be found at:
+- Module interface: `src/modules/poweraccent/PowerAccentModuleInterface/dllmain.cpp`
+- Core logic: `src/modules/poweraccent/PowerAccent.Core/PowerAccent.cs`
+- Language definitions: `src/modules/poweraccent/PowerAccent.Core/Languages.cs`
+- UI implementation: `src/modules/poweraccent/PowerAccent.UI/`
+- Module name: Line 39 in dllmain.cpp ("QuickAccent")

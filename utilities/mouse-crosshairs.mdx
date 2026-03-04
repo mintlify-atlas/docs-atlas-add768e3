@@ -1,0 +1,234 @@
+---
+title: Mouse Pointer Crosshairs
+description: Add customizable crosshairs overlay to your mouse pointer for improved precision
+---
+
+## Overview
+
+Mouse Pointer Crosshairs displays customizable crosshair lines centered on your cursor, making it easier to align elements precisely. It also includes an accessibility-focused "Gliding Cursor" feature for hands-free cursor positioning.
+
+<Note>
+  This utility is especially useful for design work, pixel-perfect alignment, accessibility needs, and presentations where precise cursor placement is important.
+</Note>
+
+## How to Activate
+
+### Crosshairs Toggle
+
+Press the activation shortcut to show or hide crosshairs:
+
+- **Default shortcut:** <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>P</kbd>
+
+### Gliding Cursor
+
+Use the gliding cursor feature for hands-free cursor movement:
+
+- **Default shortcut:** <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>.</kbd> (period)
+
+<Steps>
+  <Step title="Start Horizontal Glide">
+    Press <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>.</kbd> to begin fast horizontal scanning
+  </Step>
+  <Step title="Slow Horizontal">
+    Press the shortcut again to slow down horizontal movement
+  </Step>
+  <Step title="Switch to Vertical">
+    Press the shortcut a third time to switch to fast vertical scanning
+  </Step>
+  <Step title="Slow Vertical">
+    Press the shortcut again to slow down vertical movement
+  </Step>
+  <Step title="Complete">
+    Press the shortcut one final time to place the cursor and perform a click
+  </Step>
+</Steps>
+
+<Tip>
+  Press <kbd>Esc</kbd> during gliding to cancel the operation without clicking.
+</Tip>
+
+## Configuration Options
+
+### Activation Settings
+
+<ParamField path="activation_shortcut" type="hotkey" default="Win + Alt + P">
+  Keyboard shortcut to toggle crosshairs on and off
+</ParamField>
+
+<ParamField path="gliding_cursor_activation_shortcut" type="hotkey" default="Win + Alt + .">
+  Keyboard shortcut to activate the gliding cursor state machine
+</ParamField>
+
+<ParamField path="auto_activate" type="boolean" default="false">
+  Automatically enable crosshairs when PowerToys starts
+</ParamField>
+
+### Appearance Settings
+
+<ParamField path="crosshairs_color" type="color" default="#FF0000">
+  Color of the crosshair lines (RGB format)
+</ParamField>
+
+<ParamField path="crosshairs_border_color" type="color" default="#FFFFFF">
+  Color of the border outline around crosshair lines (RGB format)
+</ParamField>
+
+<ParamField path="crosshairs_opacity" type="number" default="75">
+  Opacity percentage of the crosshairs (0-100)
+</ParamField>
+
+<ParamField path="crosshairs_radius" type="number" default="20">
+  Size of the center gap/radius in pixels (creates a circle in the middle)
+</ParamField>
+
+<ParamField path="crosshairs_thickness" type="number" default="5">
+  Thickness of the crosshair lines in pixels
+</ParamField>
+
+<ParamField path="crosshairs_border_size" type="number" default="1">
+  Thickness of the border outline in pixels
+</ParamField>
+
+### Crosshairs Behavior
+
+<ParamField path="crosshairs_auto_hide" type="boolean" default="false">
+  Automatically hide crosshairs when the mouse stops moving
+</ParamField>
+
+<ParamField path="crosshairs_is_fixed_length_enabled" type="boolean" default="false">
+  Use fixed-length crosshairs instead of extending to screen edges
+</ParamField>
+
+<ParamField path="crosshairs_fixed_length" type="number" default="100">
+  Length of crosshair lines in pixels (when fixed length is enabled)
+</ParamField>
+
+<ParamField path="crosshairs_orientation" type="enum" default="Both">
+  Display orientation of crosshairs:
+  - **Both (0):** Horizontal and vertical lines
+  - **Horizontal (1):** Only horizontal line
+  - **Vertical (2):** Only vertical line
+</ParamField>
+
+### Gliding Cursor Speed Settings
+
+<ParamField path="gliding_travel_speed" type="number" default="30">
+  Fast speed for initial scanning phase (pixels per 200ms interval). Range: 5-60
+</ParamField>
+
+<ParamField path="gliding_delay_speed" type="number" default="5">
+  Slow speed for precise positioning phase (pixels per 200ms interval). Range: 5-60
+</ParamField>
+
+<Warning>
+  The gliding cursor forces crosshairs to "Both" orientation during operation, regardless of your normal setting. Your preferred orientation is restored when gliding completes or is cancelled.
+</Warning>
+
+## Use Cases
+
+### Design and Layout Work
+
+Align UI elements, graphics, or design components with pixel-perfect precision.
+
+```
+Scenario: Aligning two buttons in a design mockup
+Action: Enable crosshairs with Win + Alt + P
+Result: Horizontal and vertical lines help align elements visually
+```
+
+### Accessibility
+
+The gliding cursor feature provides hands-free cursor positioning for users with motor impairments or those who prefer keyboard-only navigation.
+
+<Tip>
+  Adjust gliding speeds based on your needs: higher travel speed for quickly covering large distances, lower delay speed for fine positioning.
+</Tip>
+
+### Presentations
+
+Use crosshairs to draw attention to specific screen areas or to help audiences track cursor movement on large displays.
+
+### Screen Measurement
+
+Quickly measure distances or verify alignment across screen elements during development or testing.
+
+### Photo Editing
+
+Precisely position selections, guides, or editing tools when working with images.
+
+## Keyboard Shortcuts Summary
+
+| Action | Shortcut |
+|--------|----------|
+| Toggle Crosshairs | <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>P</kbd> (customizable) |
+| Gliding Cursor | <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>.</kbd> (customizable) |
+| Cancel Gliding | <kbd>Esc</kbd> |
+
+## Gliding Cursor State Machine
+
+The gliding cursor operates in a 5-state sequence:
+
+1. **State 0 (Idle):** Press shortcut to start → moves to State 1
+2. **State 1 (Fast Horizontal):** Cursor moves quickly across screen horizontally → press shortcut → State 2
+3. **State 2 (Slow Horizontal):** Cursor moves slowly for precise horizontal positioning → press shortcut → State 3
+4. **State 3 (Fast Vertical):** Cursor moves quickly down the screen vertically → press shortcut → State 4
+5. **State 4 (Slow Vertical):** Cursor moves slowly for precise vertical positioning → press shortcut → completes with click
+
+<Note>
+  At any point during gliding, press <kbd>Esc</kbd> to cancel and return to idle without clicking.
+</Note>
+
+## Technical Details
+
+### Rendering Architecture
+
+- Crosshairs are rendered as an overlay using Windows composition APIs
+- Updates are tied to mouse movement events
+- Hardware-accelerated for smooth performance
+- Works across multiple monitors with DPI awareness
+
+### Gliding Cursor Implementation
+
+- Timer-based movement: 10ms tick interval
+- Speed units: pixels per 200ms base window
+- Fractional accumulation for smooth sub-pixel movement
+- Low-level keyboard hook for Escape key detection
+- External control mode prevents normal mouse tracking during gliding
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Crosshairs not visible">
+    - Check opacity setting (must be > 0)
+    - Verify crosshairs color contrasts with background
+    - Ensure thickness is set to a visible value (try 5 or higher)
+    - Disable auto-hide if enabled
+  </Accordion>
+  
+  <Accordion title="Crosshairs appear on wrong monitor">
+    - Crosshairs follow the cursor position automatically
+    - Check that mouse is on the expected monitor
+    - Verify display arrangement in Windows settings
+  </Accordion>
+  
+  <Accordion title="Gliding cursor moves too fast/slow">
+    - Adjust `gliding_travel_speed` (5-60) for initial scanning speed
+    - Adjust `gliding_delay_speed` (5-60) for precise positioning speed
+    - Default values: 30 for travel, 5 for delay
+  </Accordion>
+  
+  <Accordion title="Cannot cancel gliding with Escape">
+    - Ensure no other application is capturing Escape key
+    - Check for conflicting keyboard hooks
+    - Try completing the gliding sequence or restarting PowerToys
+  </Accordion>
+</AccordionGroup>
+
+## Source Code Reference
+
+The Mouse Pointer Crosshairs implementation can be found at:
+- Module interface: `src/modules/MouseUtils/MousePointerCrosshairs/dllmain.cpp`
+- Crosshairs implementation: `src/modules/MouseUtils/MousePointerCrosshairs/InclusiveCrosshairs.cpp`
+- Default crosshairs hotkey: Line 895 in dllmain.cpp (Win + Alt + P)
+- Default gliding hotkey: Line 903 in dllmain.cpp (Win + Alt + .)
+- Gliding state machine: Lines 459-537 in dllmain.cpp

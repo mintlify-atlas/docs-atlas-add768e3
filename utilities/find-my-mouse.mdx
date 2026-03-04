@@ -1,0 +1,143 @@
+---
+title: Find My Mouse
+description: Spotlight your mouse pointer with a visual effect when you need to locate it on screen
+---
+
+## Overview
+
+Find My Mouse helps you quickly locate your mouse cursor by displaying a spotlight effect that makes it stand out on your screen. When activated, it creates a circular spotlight around your cursor with a customizable darkened overlay on the rest of the screen.
+
+<Note>
+  Find My Mouse is particularly useful on multi-monitor setups or when working with large displays where the cursor can be difficult to spot.
+</Note>
+
+## How to Activate
+
+Find My Mouse can be triggered using one of three methods:
+
+### 1. Keyboard Shortcut (Default)
+
+Press the activation shortcut to display the spotlight effect:
+
+- **Default shortcut:** <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd>
+- Customizable in settings
+
+### 2. Shake Mouse
+
+Rapidly move your mouse back and forth to trigger the spotlight effect automatically.
+
+### 3. Press Control Key
+
+Quickly press the left or right Control key twice to activate the spotlight.
+
+<Tip>
+  Choose the activation method that works best for your workflow in the settings.
+</Tip>
+
+## Configuration Options
+
+### Activation Settings
+
+<ParamField path="activation_method" type="enum" default="Shortcut">
+  Choose how to trigger Find My Mouse:
+  - **Keyboard Shortcut:** Custom hotkey combination
+  - **Shake Mouse:** Detect rapid mouse movement
+  - **Press Left Ctrl Twice:** Double-tap left Control key
+  - **Press Right Ctrl Twice:** Double-tap right Control key
+</ParamField>
+
+<ParamField path="activation_shortcut" type="hotkey" default="Win + Shift + F">
+  Custom keyboard shortcut to activate Find My Mouse (when activation method is set to Keyboard Shortcut)
+</ParamField>
+
+<ParamField path="include_win_key" type="boolean" default="true">
+  Require Windows key in the Control key double-press activation method
+</ParamField>
+
+<ParamField path="do_not_activate_on_game_mode" type="boolean" default="true">
+  Prevent activation when Windows Game Mode is active
+</ParamField>
+
+### Appearance Settings
+
+<ParamField path="background_color" type="color" default="#000000CC">
+  Color of the darkened overlay outside the spotlight (supports ARGB with transparency)
+</ParamField>
+
+<ParamField path="spotlight_color" type="color" default="#FFFFFFFF">
+  Border color of the spotlight circle (supports ARGB with transparency)
+</ParamField>
+
+<ParamField path="spotlight_radius" type="number" default="100">
+  Radius of the spotlight circle in pixels (final size after animation)
+</ParamField>
+
+<ParamField path="spotlight_initial_zoom" type="number" default="90">
+  Percentage of initial spotlight size before animation (used to create zoom effect)
+</ParamField>
+
+<ParamField path="animation_duration_ms" type="number" default="500">
+  Duration of the spotlight appearance animation in milliseconds
+</ParamField>
+
+### Mouse Shake Detection Settings
+
+<ParamField path="shaking_minimum_distance" type="number" default="1000">
+  Minimum cursor travel distance in pixels to trigger shake detection
+</ParamField>
+
+<ParamField path="shaking_interval_ms" type="number" default="100">
+  Time window in milliseconds for detecting shake movement
+</ParamField>
+
+<ParamField path="shaking_factor" type="number" default="2">
+  Sensitivity multiplier for shake detection (higher = more sensitive)
+</ParamField>
+
+### Application Exclusions
+
+<ParamField path="excluded_apps" type="string list">
+  List of application names (one per line) where Find My Mouse should not activate. Useful for preventing conflicts with games or full-screen applications.
+  
+  Example:
+  ```
+  game.exe
+  video_editor.exe
+  presentation_software.exe
+  ```
+</ParamField>
+
+## Use Cases
+
+### Multi-Monitor Setups
+
+When working with multiple displays, quickly locate which screen your cursor is on by activating the spotlight.
+
+```
+Scenario: Working across 3 monitors
+Action: Press Win + Shift + F
+Result: Spotlight immediately shows cursor location
+```
+
+### Presentations
+
+Draw attention to your cursor during screen sharing or presentations without needing a laser pointer.
+
+<Tip>
+  Configure a shorter animation duration (200-300ms) for presentations to make the effect more immediate.
+</Tip>
+
+### Large Display Screens
+
+On 4K monitors or ultra-wide displays, the default cursor can be difficult to spot. Find My Mouse makes it instantly visible.
+
+### Accessibility
+
+Users with visual tracking difficulties can use Find My Mouse to quickly reorient to the cursor position.
+
+## Source Code Reference
+
+The Find My Mouse implementation can be found at:
+- Module interface: `src/modules/MouseUtils/FindMyMouse/dllmain.cpp`
+- Settings structure: Lines 18-32 in dllmain.cpp
+- Default hotkey: Line 612 (Win + Shift + F)

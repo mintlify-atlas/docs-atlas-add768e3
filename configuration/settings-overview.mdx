@@ -1,0 +1,329 @@
+---
+title: 'Settings overview'
+description: 'Understanding PowerToys settings architecture, general configuration options, and settings file locations'
+keywords: ['settings', 'configuration', 'IPC', 'general settings', 'modules']
+---
+
+## Settings architecture
+
+PowerToys uses a distributed settings system where the Settings UI communicates with the PowerToys Runner and individual modules through inter-process communication (IPC).
+
+### Components
+
+<CardGroup cols={2}>
+  <Card title="Settings UI" icon="sliders">
+    WinUI application for configuring all PowerToys utilities
+  </Card>
+  <Card title="Runner" icon="play">
+    Main process that loads modules and handles hotkeys
+  </Card>
+  <Card title="IPC Communication" icon="network-wired">
+    Named pipes for real-time settings synchronization
+  </Card>
+  <Card title="JSON Storage" icon="file-code">
+    Settings persisted as JSON files in LocalApplicationData
+  </Card>
+</CardGroup>
+
+### IPC communication
+
+The Settings UI communicates with the Runner using JSON messages over named pipes:
+
+```csharp
+// Example IPC message format
+{
+  "powertoys": {
+    "<module_name>": {
+      // Module-specific settings
+    }
+  }
+}
+```
+
+When you change a setting in the UI:
+
+<Steps>
+  <Step title="User modifies setting">
+    The Settings UI updates its ViewModel and validates the change
+  </Step>
+  <Step title="Send IPC message">
+    Settings UI sends JSON message to Runner via named pipe at `src/settings-ui/Settings.UI/ViewModels/*ViewModel.cs`
+  </Step>
+  <Step title="Runner processes message">
+    Runner receives message and forwards to appropriate module at `src/runner/`
+  </Step>
+  <Step title="Settings persisted">
+    Module saves settings to JSON file in `%LOCALAPPDATA%\Microsoft\PowerToys\`
+  </Step>
+</Steps>
+
+## General settings
+
+General settings control PowerToys behavior across all utilities. These are defined in `GeneralSettings.cs`:
+
+### Startup and system behavior
+
+<AccordionGroup>
+  <Accordion title="Run at startup">
+    Controls whether PowerToys starts when you log in to Windows. This creates a scheduled task for reliable startup.
+    
+    **Registry key:** `Software\Policies\PowerToys\ConfigureRunAtStartup`
+    
+    **Can be controlled by GPO:** Yes (since v0.89.0)
+  </Accordion>
+  
+  <Accordion title="Run elevated">
+    Determines if PowerToys runs with administrator privileges. Required for some features to work with elevated applications.
+    
+    **Setting:** `GeneralSettings.RunElevated`
+    
+    **Default:** `false`
+  </Accordion>
+  
+  <Accordion title="System tray icon">
+    Controls visibility of the PowerToys icon in the system tray.
+    
+    **Setting:** `GeneralSettings.ShowSysTrayIcon`
+    
+    **Default:** `true`
+  </Accordion>
+  
+  <Accordion title="Theme adaptive tray icon">
+    When enabled, the tray icon color adapts to Windows theme (light/dark).
+    
+    **Setting:** `GeneralSettings.ShowThemeAdaptiveTrayIcon`
+    
+    **Default:** Varies by theme
+  </Accordion>
+</AccordionGroup>
+
+### Theme settings
+
+PowerToys supports three theme modes defined in `GeneralSettings.cs:139-150`:
+
+- **Dark** - Force dark theme
+- **Light** - Force light theme  
+- **System** - Follow Windows theme (default)
+
+```json
+{
+  "theme": "system",
+  "system_theme": "light"
+}
+```
+
+### Updates and notifications
+
+<Tabs>
+  <Tab title="Update settings">
+    ```json
+    {
+      "show_new_updates_toast_notification": true,
+      "download_updates_automatically": false,
+      "show_whats_new_after_updates": true
+    }
+    ```
+  </Tab>
+  <Tab title="GPO control">
+    Administrators can control update behavior via Group Policy:
+    
+    - `DisableAutomaticUpdateDownload` - Prevents automatic downloads
+    - `DisableNewUpdateToast` - Hides update notifications
+    - `DoNotShowWhatsNewAfterUpdates` - Suppresses release notes
+  </Tab>
+</Tabs>
+
+### Experimentation and diagnostics
+
+<CardGroup cols={2}>
+  <Card title="Experimentation" icon="flask">
+    Allows participation in feature experiments (Windows Insider builds only)
+    
+    **Setting:** `EnableExperimentation`
+    
+    **GPO:** `AllowExperimentation`
+  </Card>
+  <Card title="Diagnostic data" icon="chart-line">
+    Enables telemetry to help improve PowerToys
+    
+    **GPO:** `AllowDataDiagnostics` (since v0.86.0)
+  </Card>
+</CardGroup>
+
+### Quick Access
+
+Quick Access provides fast access to PowerToys modules via a keyboard shortcut.
+
+```json
+{
+  "enable_quick_access": true,
+  "quick_access_shortcut": {
+    "win": true,
+    "ctrl": false,
+    "alt": true,
+    "shift": false,
+    "code": 80
+  }
+}
+```
+
+The shortcut is defined using virtual key codes. See [Keyboard shortcuts](/configuration/keyboard-shortcuts) for more details.
+
+## Module enable/disable
+
+Each PowerToys utility can be individually enabled or disabled. The enabled state is stored in the `EnabledModules` class:
+
+### Module state management
+
+```json
+{
+  "enabled": {
+    "AlwaysOnTop": true,
+    "Awake": false,
+    "ColorPicker": true,
+    "FancyZones": true,
+    "PowerLauncher": true,
+    // ... other modules
+  }
+}
+```
+
+### GPO-controlled module states
+
+Administrators can enforce module states via Group Policy. Individual module policies override the global utility policy.
+
+<Note>
+GPO policies have the following precedence:
+1. Individual module policy (e.g., `ConfigureEnabledUtilityColorPicker`)
+2. Global utility policy (`ConfigureAllUtilityGlobalEnabledState`)
+3. User preference
+</Note>
+
+Example GPO configuration at `src/gpo/assets/PowerToys.admx:62-71`:
+
+```xml
+<policy name="ConfigureAllUtilityGlobalEnabledState" 
+        key="Software\Policies\PowerToys" 
+        valueName="ConfigureGlobalUtilityEnabledState">
+  <enabledValue>
+    <decimal value="1" />
+  </enabledValue>
+  <disabledValue>
+    <decimal value="0" />
+  </disabledValue>
+</policy>
+```
+
+## Settings file locations
+
+PowerToys stores settings as JSON files in the Windows LocalApplicationData folder.
+
+### Primary locations
+
+<CodeGroup>
+```bash Windows
+%LOCALAPPDATA%\Microsoft\PowerToys\
+```
+
+```bash Expanded path
+C:\Users\<username>\AppData\Local\Microsoft\PowerToys\
+```
+</CodeGroup>
+
+### File structure
+
+```
+%LOCALAPPDATA%\Microsoft\PowerToys\
+├── settings.json              # General settings
+├── Logs\                      # Application logs
+├── AlwaysOnTop\              
+│   └── settings.json         # Always On Top settings
+├── ColorPicker\
+│   └── settings.json         # Color Picker settings
+├── FancyZones\
+│   ├── settings.json         # FancyZones settings
+│   └── zones-settings.json   # Zone layouts
+├── PowerToys Run\
+│   └── settings.json         # PowerToys Run settings
+└── <module-name>\
+    └── settings.json         # Each module has its own folder
+```
+
+### Settings file format
+
+All settings files follow a consistent structure defined in `src/settings-ui/Settings.UI.Library/`:
+
+```json
+{
+  "name": "<ModuleName>",
+  "version": "1.0",
+  "properties": {
+    // Module-specific properties
+  }
+}
+```
+
+### Accessing settings programmatically
+
+Settings are accessed via the `SettingsRepository` pattern implemented in `src/settings-ui/Settings.UI.Library/`:
+
+```csharp
+// From GeneralViewModel.cs:116-120
+private ISettingsRepository<GeneralSettings> _settingsRepository;
+GeneralSettingsConfig = settingsRepository.SettingsConfig;
+
+// Settings are automatically watched for external changes
+_settingsRepository.SettingsChanged += OnSettingsChanged;
+```
+
+### Settings backup and restore
+
+Starting with recent versions, PowerToys includes settings backup and restore functionality:
+
+<Steps>
+  <Step title="Configure backup location">
+    Set a backup directory in General settings
+  </Step>
+  <Step title="Backup settings">
+    Exports all module settings to the backup location
+  </Step>
+  <Step title="Restore settings">
+    Imports settings from backup directory
+  </Step>
+</Steps>
+
+Backup configuration is handled in `GeneralViewModel.cs:95-110`.
+
+## Configuration via command line
+
+Some settings support command-line configuration through the `ICmdLineRepresentable` interface implemented by `HotkeySettings` and other types.
+
+```bash
+# Example: Set a hotkey via command line
+powertoys.exe --set-hotkey "Win+Alt+P"
+```
+
+See `HotkeySettings.cs:253-288` for parsing implementation.
+
+## Settings validation
+
+Settings are validated when loaded to ensure integrity:
+
+- **Type checking** - JSON deserialization validates types
+- **Range validation** - Numeric values checked against valid ranges
+- **Conflict detection** - Hotkeys checked for conflicts with system shortcuts
+
+<Warning>
+Manually editing settings files while PowerToys is running may cause conflicts. Changes are detected via file watchers, but race conditions can occur.
+</Warning>
+
+## Related documentation
+
+<CardGroup cols={2}>
+  <Card title="Keyboard shortcuts" icon="keyboard" href="/configuration/keyboard-shortcuts">
+    Complete list of keyboard shortcuts for all utilities
+  </Card>
+  <Card title="Group Policy" icon="shield" href="/configuration/group-policy">
+    Enterprise configuration via Group Policy
+  </Card>
+</CardGroup>

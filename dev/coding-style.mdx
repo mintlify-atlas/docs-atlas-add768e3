@@ -1,0 +1,647 @@
+---
+title: Coding Style Guidelines
+description: Code formatting, style conventions, and best practices for PowerToys development
+---
+
+## Philosophy
+
+PowerToys follows a pragmatic approach to coding style:
+
+1. **When modifying existing code**: Follow the existing style as closely as possible
+2. **When writing new code**: Follow Modern C++ and C# best practices
+3. **When refactoring**: Apply modern patterns and reference language guidelines
+
+<Tip>
+Consistency within a file or module is more important than strict adherence to global rules. Make the code readable and maintainable.
+</Tip>
+
+## C++ Style
+
+### Core Guidelines
+
+Follow the [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines) for modern C++ development.
+
+**Key principles:**
+- Use RAII (Resource Acquisition Is Initialization)
+- Prefer `std::unique_ptr` and `std::shared_ptr` over raw pointers
+- Use `const` and `constexpr` where applicable
+- Avoid manual memory management
+- Use standard library algorithms and containers
+
+### Code Formatting
+
+PowerToys uses [ClangFormat](https://clang.llvm.org/docs/ClangFormat.html) for automatic C++ code formatting.
+
+#### Using ClangFormat in Visual Studio
+
+**Automatic formatting:**
+- Format document: `Ctrl+K, Ctrl+D`
+- Format selection: `Ctrl+K, Ctrl+F`
+
+**Enable automatic formatting:**
+1. Tools > Options > Text Editor > C/C++ > Code Style > Formatting
+2. Check "Automatically format on paste"
+3. Check "Automatically format completed statement on ;"
+
+#### Using ClangFormat from Command Line
+
+Format modified files automatically:
+
+```powershell
+# Format all modified files
+.\src\codeAnalysis\format_sources.ps1
+```
+
+**Requirements:**
+- Run from "Native Tools Command Prompt for VS"
+- Or ensure `clang-format.exe` is in `%PATH%`
+- Script uses Git to find modified files
+
+**Manual formatting:**
+```powershell
+# Format specific file
+clang-format -i path\to\file.cpp
+
+# Format with style from .clang-format
+clang-format -style=file -i path\to\file.cpp
+```
+
+### ClangFormat Configuration
+
+Configuration file: [`src/.clang-format`](https://github.com/microsoft/PowerToys/blob/main/src/.clang-format)
+
+**Key formatting rules:**
+```yaml
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 120
+PointerAlignment: Left
+BreakBeforeBraces: Allman
+```
+
+### C++ Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|----------|
+| **Classes** | PascalCase | `ColorPicker`, `WindowManager` |
+| **Functions** | camelCase or snake_case | `getWindowRect()`, `init_logger()` |
+| **Variables** | camelCase or snake_case | `currentWindow`, `window_rect` |
+| **Constants** | UPPER_CASE | `MAX_BUFFER_SIZE` |
+| **Namespaces** | lowercase | `fancyzones`, `powerrenameext` |
+| **Member variables** | m_ prefix (optional) | `m_windowHandle`, `m_settings` |
+
+### C++ Best Practices
+
+#### Modern C++ Features
+
+**Prefer smart pointers:**
+```cpp
+// Good
+auto window = std::make_unique<Window>();
+std::shared_ptr<Settings> settings = GetSettings();
+
+// Avoid
+Window* window = new Window();
+delete window;
+```
+
+**Use auto for type deduction:**
+```cpp
+// Good
+auto rect = GetWindowRect(hwnd);
+auto& settings = GetSettings();
+
+// Avoid
+RECT rect = GetWindowRect(hwnd);
+```
+
+**Range-based for loops:**
+```cpp
+// Good
+for (const auto& item : collection)
+{
+    ProcessItem(item);
+}
+
+// Avoid
+for (size_t i = 0; i < collection.size(); i++)
+{
+    ProcessItem(collection[i]);
+}
+```
+
+#### String Handling
+
+```cpp
+// Prefer std::wstring for Windows APIs
+std::wstring windowTitle = L"PowerToys";
+
+// Use string literals
+using namespace std::string_literals;
+auto message = L"Error: "s + errorDetails;
+
+// Avoid C-style strings when possible
+// Use std::wstring instead of wchar_t*
+```
+
+#### Error Handling
+
+```cpp
+// Use exceptions for exceptional cases
+try
+{
+    auto result = ProcessInput(input);
+}
+catch (const std::exception& ex)
+{
+    Logger::error("Processing failed: {}", ex.what());
+}
+
+// Use return codes for expected failures
+if (!ValidateInput(input))
+{
+    return ERROR_INVALID_PARAMETER;
+}
+```
+
+### Include Order
+
+```cpp
+// 1. Precompiled header (if used)
+#include "pch.h"
+
+// 2. Corresponding header file
+#include "MyClass.h"
+
+// 3. C system headers
+#include <windows.h>
+
+// 4. C++ standard library headers
+#include <string>
+#include <vector>
+#include <memory>
+
+// 5. Third-party library headers
+#include <json.hpp>
+
+// 6. Project headers
+#include "common/utils.h"
+#include "Settings.h"
+```
+
+## C# Style
+
+### Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|----------|
+| **Classes** | PascalCase | `ColorPicker`, `SettingsViewModel` |
+| **Interfaces** | IPascalCase | `IModule`, `ISettings` |
+| **Methods** | PascalCase | `GetWindowRect()`, `ProcessInput()` |
+| **Properties** | PascalCase | `WindowTitle`, `IsEnabled` |
+| **Fields (private)** | _camelCase | `_windowHandle`, `_settings` |
+| **Parameters** | camelCase | `windowHandle`, `inputText` |
+| **Local variables** | camelCase | `currentWindow`, `result` |
+| **Constants** | PascalCase | `MaxBufferSize`, `DefaultTimeout` |
+| **Enums** | PascalCase | `WindowState.Maximized` |
+
+### C# Best Practices
+
+#### Nullable Reference Types
+
+PowerToys enables nullable reference types:
+
+```csharp
+// Good - explicit nullability
+public string? GetWindowTitle(Window? window)
+{
+    if (window == null)
+    {
+        return null;
+    }
+    return window.Title;
+}
+
+// Use null-forgiving operator when you know it's not null
+var title = GetWindowTitle(window)!;
+```
+
+#### Properties vs Fields
+
+```csharp
+// Good - use properties for public members
+public class Settings
+{
+    public string ModuleName { get; set; }
+    public bool IsEnabled { get; set; }
+    
+    private string _internalState;
+}
+
+// Use auto-properties when possible
+public string Name { get; set; } = "Default";
+```
+
+#### LINQ and Modern C#
+
+```csharp
+// Good - use LINQ for collections
+var activeModules = modules
+    .Where(m => m.IsEnabled)
+    .OrderBy(m => m.Name)
+    .ToList();
+
+// Pattern matching
+if (obj is Settings settings && settings.IsEnabled)
+{
+    ApplySettings(settings);
+}
+
+// Switch expressions
+var description = module switch
+{
+    "FancyZones" => "Window manager",
+    "PowerRename" => "Bulk rename tool",
+    _ => "Unknown module"
+};
+```
+
+#### Async/Await
+
+```csharp
+// Good - async all the way
+public async Task<Settings> LoadSettingsAsync()
+{
+    var json = await File.ReadAllTextAsync(settingsPath);
+    return JsonSerializer.Deserialize<Settings>(json);
+}
+
+// Use ConfigureAwait(false) in library code
+var result = await ProcessAsync().ConfigureAwait(false);
+```
+
+#### IDisposable Pattern
+
+```csharp
+public class ResourceManager : IDisposable
+{
+    private bool _disposed = false;
+    private FileStream? _stream;
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // Dispose managed resources
+                _stream?.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+}
+```
+
+### C# Code Formatting
+
+Visual Studio's default C# formatting is generally acceptable.
+
+**Key settings:**
+- Indentation: 4 spaces (no tabs)
+- Brace style: Allman (braces on new line)
+- Line length: Aim for 120 characters or less
+
+**Example:**
+```csharp
+public class Example
+{
+    public void Method(string parameter)
+    {
+        if (condition)
+        {
+            DoSomething();
+        }
+        else
+        {
+            DoSomethingElse();
+        }
+    }
+}
+```
+
+## XAML Style
+
+### XamlStyler
+
+PowerToys uses [XamlStyler](https://github.com/Xavalon/XamlStyler/) for XAML formatting.
+
+#### Install XamlStyler
+
+[Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=TeamXavalon.XAMLStyler2022)
+
+#### Apply XAML Formatting
+
+**In Visual Studio:**
+- Format on save (if enabled in XamlStyler options)
+- Manual format: Right-click in XAML editor > Format Document
+
+**From command line:**
+```powershell
+# Format all XAML files
+.\.pipelines\applyXamlStyling.ps1 -Main
+```
+
+### XAML Conventions
+
+**Element ordering:**
+```xaml
+<Button
+    x:Name="SaveButton"
+    Grid.Row="1"
+    Grid.Column="2"
+    Width="100"
+    Height="32"
+    Margin="8,0,0,0"
+    Content="Save"
+    Click="SaveButton_Click" />
+```
+
+**Use resource strings:**
+```xaml
+<!-- Good - localizable -->
+<TextBlock Text="{x:Bind ViewModel.Title}" />
+<Button x:Uid="SaveButton" Content="Save" />
+
+<!-- Avoid - hardcoded strings -->
+<Button Content="Save" />
+```
+
+**Naming:**
+- `x:Name` in PascalCase: `MainGrid`, `SettingsPanel`
+- `x:Uid` for localization: `ModuleName_SettingName`
+
+## Resource Strings and Localization
+
+### Resource String Naming
+
+**Pattern:** `<ModuleName>_<Context>_<Element>`
+
+**Examples:**
+```
+FancyZones_Settings_EnableZones
+ColorPicker_OOBE_Description
+PowerRename_Error_InvalidPattern
+```
+
+### Using Resource Strings
+
+**In XAML:**
+```xaml
+<TextBlock x:Uid="FancyZones_Settings_Title" />
+
+<!-- In Resources.resw -->
+<data name="FancyZones_Settings_Title.Text" xml:space="preserve">
+  <value>FancyZones Settings</value>
+</data>
+```
+
+**In C#:**
+```csharp
+var resourceLoader = ResourceLoader.GetForViewIndependentUse();
+string title = resourceLoader.GetString("FancyZones_Settings_Title");
+```
+
+<Warning>
+Never submit PRs that modify localized strings in languages other than English. Localization is handled by Microsoft's internal localization team.
+</Warning>
+
+## Code Comments
+
+### When to Comment
+
+**Good comments explain WHY:**
+```cpp
+// Delay required for WinAppDriver to stabilize after window creation
+Sleep(500);
+
+// Windows 10 SDK bug workaround: CoCreateInstance fails without explicit apartment initialization
+CoInitialize(nullptr);
+```
+
+**Poor comments explain WHAT (code already shows this):**
+```cpp
+// Bad - obvious from code
+count++; // Increment count
+```
+
+### XML Documentation (C#)
+
+```csharp
+/// <summary>
+/// Processes the input string and returns the formatted result.
+/// </summary>
+/// <param name="input">The input string to process.</param>
+/// <returns>The processed string, or null if input is invalid.</returns>
+/// <exception cref="ArgumentNullException">Thrown when input is null.</exception>
+public string? ProcessInput(string input)
+{
+    // Implementation
+}
+```
+
+### Doxygen Comments (C++)
+
+```cpp
+/**
+ * @brief Retrieves the window rectangle.
+ * @param hwnd Handle to the window.
+ * @return The window rectangle, or empty rect if hwnd is invalid.
+ */
+RECT GetWindowRect(HWND hwnd);
+```
+
+## Pull Request Guidelines
+
+### PR Checklist
+
+Before submitting a PR:
+
+- [ ] Code follows existing style in modified files
+- [ ] New code follows modern C++/C# practices
+- [ ] Code is formatted (ClangFormat for C++, XamlStyler for XAML)
+- [ ] Comments explain complex logic
+- [ ] Resource strings used for user-facing text
+- [ ] No hardcoded strings in UI
+- [ ] Code builds without warnings
+- [ ] Tests pass locally
+
+### Code Review Expectations
+
+**Reviewers will check for:**
+- Code readability and maintainability
+- Proper error handling
+- Memory management (C++ leaks, C# disposable patterns)
+- Thread safety for async code
+- Security considerations (input validation, injection attacks)
+- Performance implications
+- Consistency with existing patterns
+
+### Before Opening PR
+
+1. **Format your code:**
+   ```powershell
+   # C++ files
+   .\src\codeAnalysis\format_sources.ps1
+   
+   # XAML files
+   .\.pipelines\applyXamlStyling.ps1 -Main
+   ```
+
+2. **Build successfully:**
+   ```powershell
+   .\tools\build\build.ps1 -Configuration Release
+   ```
+
+3. **Run tests:**
+   - Test Explorer: Run all tests
+   - Verify no regressions
+
+4. **Review changes:**
+   ```bash
+   git diff
+   ```
+   - Remove debug code
+   - Remove commented-out code
+   - Check for unintended changes
+
+## Project-Specific Guidelines
+
+### Settings Integration
+
+**Settings JSON structure:**
+```csharp
+public class ModuleSettings : BasePTModuleSettings
+{
+    public ModuleSettings()
+    {
+        Name = "ModuleName";
+        Version = "1.0";
+    }
+
+    public ModuleProperties Properties { get; set; } = new ModuleProperties();
+}
+
+public class ModuleProperties
+{
+    public bool IsEnabled { get; set; } = true;
+    public string HotKey { get; set; } = "Win+Shift+M";
+}
+```
+
+### Logging Standards
+
+**C++ logging:**
+```cpp
+#include <common/logger/logger.h>
+
+Logger::info("Module initialized");
+Logger::warn("Configuration issue: {}", details);
+Logger::error("Failed to process: {}", errorMessage);
+```
+
+**C# logging:**
+```csharp
+using ManagedCommon;
+
+Logger.LogInfo("Module initialized");
+Logger.LogWarning("Configuration issue");
+Logger.LogError("Failed to process", exception);
+```
+
+**Logging principles:**
+- Log errors and warnings always
+- Log info for important operations
+- Use debug/trace sparingly (disabled by default)
+- Include context in log messages
+- Don't log sensitive information (passwords, tokens, PII)
+
+### Telemetry
+
+**C++ telemetry:**
+```cpp
+#include <common/Telemetry/trace.h>
+
+Trace::ModuleName::Enable(true);
+```
+
+**C# telemetry:**
+```csharp
+using PowerToys.Telemetry;
+
+PowerToysTelemetry.Log.WriteEvent(new ModuleEnabledEvent());
+```
+
+<Note>
+All telemetry respects user privacy settings. Users can disable telemetry in PowerToys Settings.
+</Note>
+
+## Code Quality Tools
+
+### Static Analysis
+
+PowerToys uses Visual Studio's code analysis:
+
+**For C++:**
+- Configuration: `CppRuleSet.ruleset`
+- Properties: `Cpp.Build.props`
+
+**For C#:**
+- Built-in Roslyn analyzers
+- Configuration in `.editorconfig`
+
+### Build Properties
+
+**Key build properties:**
+- `Directory.Build.props` - Shared properties for all projects
+- `Directory.Build.targets` - Shared targets
+- `Directory.Packages.props` - Central package version management
+
+## Additional Resources
+
+### External Style Guides
+
+- [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
+- [Microsoft C# Coding Conventions](https://docs.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions)
+- [WinUI 3 Design Guidelines](https://learn.microsoft.com/windows/apps/design/)
+
+### PowerToys Documentation
+
+- [Development Guidelines](https://github.com/microsoft/PowerToys/blob/main/doc/devdocs/development/guidelines.md)
+- [Contributing Guide](https://github.com/microsoft/PowerToys/blob/main/CONTRIBUTING.md)
+- [PR Template](https://github.com/microsoft/PowerToys/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building" icon="hammer" href="/dev/building">
+    Build PowerToys from source
+  </Card>
+  <Card title="Debugging" icon="bug" href="/dev/debugging">
+    Debug PowerToys effectively
+  </Card>
+  <Card title="Testing" icon="flask" href="/dev/testing">
+    Write tests for your code
+  </Card>
+  <Card title="Creating New Utility" icon="plus" href="/dev/creating-new-utility">
+    Create a new PowerToys utility
+  </Card>
+</CardGroup>

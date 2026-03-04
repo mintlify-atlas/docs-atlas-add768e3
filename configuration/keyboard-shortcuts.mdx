@@ -1,0 +1,353 @@
+---
+title: 'Keyboard shortcuts'
+description: 'Complete reference of keyboard shortcuts for all PowerToys utilities, customization options, and conflict resolution'
+keywords: ['hotkeys', 'shortcuts', 'keybindings', 'conflicts']
+---
+
+## Overview
+
+Keyboard shortcuts (hotkeys) are a core feature of PowerToys, allowing quick activation of utilities without leaving your current task. All shortcuts are customizable and checked for conflicts.
+
+### Hotkey structure
+
+Keyboards shortcuts in PowerToys use the `HotkeySettings` class defined in `src/settings-ui/Settings.UI.Library/HotkeySettings.cs`:
+
+```csharp
+public record HotkeySettings
+{
+    public bool Win { get; set; }      // Windows key
+    public bool Ctrl { get; set; }     // Control key
+    public bool Alt { get; set; }      // Alt key
+    public bool Shift { get; set; }    // Shift key
+    public int Code { get; set; }      // Virtual key code
+}
+```
+
+<Info>
+Virtual key codes follow the [Windows Virtual-Key Codes](https://learn.microsoft.com/windows/win32/inputdev/virtual-key-codes) specification.
+</Info>
+
+## Default keyboard shortcuts
+
+### Global shortcuts
+
+<AccordionGroup>
+  <Accordion title="Quick Access" icon="bolt">
+    **Default:** Win + Alt + P (code: 80)
+    
+    Opens the Quick Access menu to quickly access any PowerToys module.
+    
+    Defined in `GeneralSettings.cs:111`
+  </Accordion>
+</AccordionGroup>
+
+### Utility shortcuts
+
+<Tabs>
+  <Tab title="Productivity">
+    | Utility | Default Shortcut | Action | ViewModel Reference |
+    |---------|-----------------|--------|--------------------|
+    | **PowerToys Run** | Alt + Space | Open launcher | `PowerLauncherViewModel.cs` |
+    | **Always On Top** | Win + Ctrl + T | Pin window on top | `AlwaysOnTopViewModel.cs` |
+    | **Color Picker** | Win + Shift + C | Activate color picker | `ColorPickerViewModel.cs` |
+    | **FancyZones Editor** | Win + Shift + ` | Open zone editor | `FancyZonesViewModel.cs:95` |
+    | **FancyZones Next Tab** | Win + PgDn | Switch to next zone tab | `FancyZonesViewModel.cs:96` |
+    | **FancyZones Prev Tab** | Win + PgUp | Switch to previous zone tab | `FancyZonesViewModel.cs:97` |
+    | **Screen Ruler** | Win + Shift + M | Activate screen ruler | `MeasureToolViewModel.cs` |
+    | **Text Extractor** | Win + Shift + T | Extract text from screen | PowerOcrViewModel.cs |
+    | **Shortcut Guide** | Win (hold) | Show Windows shortcuts | `ShortcutGuideViewModel.cs` |
+  </Tab>
+  
+  <Tab title="Clipboard & Paste">
+    | Utility | Default Shortcut | Action | ViewModel Reference |
+    |---------|-----------------|--------|--------------------|
+    | **Advanced Paste** | Win + Shift + V | Open paste menu | `AdvancedPasteViewModel.cs` |
+    | **Advanced Paste (Direct)** | Ctrl + Win + Alt + V | Paste as plain text | `AdvancedPasteViewModel.cs` |
+    | **Advanced Paste (Markdown)** | Ctrl + Win + Alt + Shift + V | Paste as markdown | `AdvancedPasteViewModel.cs` |
+    | **Advanced Paste (JSON)** | Ctrl + Win + Alt + J | Paste as JSON | `AdvancedPasteViewModel.cs` |
+  </Tab>
+  
+  <Tab title="Display & Mouse">
+    | Utility | Default Shortcut | Action | ViewModel Reference |
+    |---------|-----------------|--------|--------------------|
+    | **Crop And Lock** | Win + Ctrl + Shift + T | Crop window thumbnail | `CropAndLockViewModel.cs` |
+    | **Light Switch** | Custom | Toggle dark/light mode | `LightSwitchViewModel.cs` |
+    | **Mouse Highlighter** | Win + Shift + H | Toggle mouse highlighting | `MouseUtilsViewModel.cs` |
+    | **Mouse Pointer Crosshairs** | Win + Alt + P | Toggle crosshairs | `MouseUtilsViewModel.cs` |
+    | **Mouse Jump** | Win + Shift + D | Show mouse jump grid | `MouseUtilsViewModel.cs` |
+    | **Find My Mouse** | Ctrl + Ctrl (double tap) | Locate mouse pointer | `MouseUtilsViewModel.cs` |
+    | **Peek** | Ctrl + Space | Preview files | `PeekViewModel.cs` |
+  </Tab>
+  
+  <Tab title="Developer Tools">
+    | Utility | Default Shortcut | Action | ViewModel Reference |
+    |---------|-----------------|--------|--------------------|
+    | **Command Palette** | Win + Shift + : | Open command palette | `CmdPalViewModel.cs` |
+    | **Environment Variables** | None | Open in settings | `EnvironmentVariablesViewModel.cs` |
+    | **Registry Preview** | None | Opens with .reg files | `RegistryPreviewViewModel.cs` |
+    | **Hosts File Editor** | None | Open in settings | `HostsViewModel.cs` |
+  </Tab>
+  
+  <Tab title="ZoomIt">
+    | Feature | Default Shortcut | Action |
+    |---------|-----------------|--------|
+    | **Zoom** | Ctrl + 1 | Enter zoom mode |
+    | **Live Zoom** | Ctrl + 4 | Enter live zoom mode |
+    | **Draw** | Ctrl + 2 | Enter draw mode |
+    | **Type** | Ctrl + 3 | Enter type mode |
+    | **Record** | Ctrl + 5 | Start/stop recording |
+    | **Snip** | Ctrl + 6 | Capture screen snip |
+    | **Break Timer** | None | Show break timer |
+  </Tab>
+</Tabs>
+
+## Customizing shortcuts
+
+### Via Settings UI
+
+<Steps>
+  <Step title="Open utility settings">
+    Navigate to the specific utility's settings page in PowerToys Settings
+  </Step>
+  <Step title="Click shortcut field">
+    Click on the keyboard shortcut input field
+  </Step>
+  <Step title="Press new combination">
+    Press your desired key combination (must include modifier keys)
+  </Step>
+  <Step title="Check for conflicts">
+    PowerToys automatically checks for conflicts and displays warnings
+  </Step>
+  <Step title="Save changes">
+    Changes are saved immediately and communicated via IPC to the Runner
+  </Step>
+</Steps>
+
+### Shortcut requirements
+
+Valid shortcuts must meet these criteria (enforced in `HotkeySettings.cs:226-234`):
+
+<Warning>
+- Must include at least one modifier key (Win, Ctrl, Alt, or Shift)
+- Must include a main key (letter, number, or function key)
+- Cannot use Tab alone (reserved for accessibility)
+- Cannot conflict with system shortcuts
+</Warning>
+
+```csharp
+// From HotkeySettings.cs:226-234
+public bool IsValid()
+{
+    if (IsAccessibleShortcut())
+    {
+        return false;
+    }
+    
+    return (Alt || Ctrl || Win || Shift) && Code != 0;
+}
+```
+
+### Shortcut format
+
+Shortcuts are stored in JSON with virtual key codes:
+
+```json
+{
+  "win": true,
+  "ctrl": false,
+  "alt": true,
+  "shift": false,
+  "code": 80
+}
+```
+
+This represents: **Win + Alt + P** (P has virtual key code 80)
+
+### Command-line format
+
+Shortcuts can be specified via command line using the `TryParseFromCmd` method (`HotkeySettings.cs:253-288`):
+
+```bash
+# Format: Modifier+Modifier+Key
+Win+Alt+P
+Ctrl+Shift+F5
+Win+Ctrl+Alt+0x43  # Using hex virtual key code
+```
+
+<Tip>
+Supported modifiers: `Win`, `Ctrl`, `Alt`, `Shift`
+
+Keys can be:
+- Single letters/digits: `A`, `5`
+- Virtual key codes: `0x70` (F1)
+- Key names: `F5`, `Home`, `End`
+</Tip>
+
+## Conflict detection
+
+PowerToys includes sophisticated conflict detection to prevent shortcut collisions.
+
+### Conflict types
+
+<CardGroup cols={2}>
+  <Card title="System conflicts" icon="triangle-exclamation">
+    Conflicts with Windows built-in shortcuts (Win+L, Alt+Tab, etc.)
+    
+    **Cannot be ignored**
+  </Card>
+  <Card title="PowerToys conflicts" icon="exclamation">
+    Conflicts between different PowerToys utilities
+    
+    **Can be ignored if desired**
+  </Card>
+</CardGroup>
+
+### Conflict properties
+
+The `HotkeySettings` class tracks conflict state (`HotkeySettings.cs:62-115`):
+
+```csharp
+public bool HasConflict { get; set; }          // Is there a conflict?
+public string ConflictDescription { get; set; } // What conflicts?
+public bool IsSystemConflict { get; set; }     // System vs. app conflict?
+public bool IgnoreConflict { get; set; }       // User chose to ignore?
+```
+
+### Conflict resolution workflow
+
+<Steps>
+  <Step title="Detect conflict">
+    When you set a shortcut, PowerToys checks all registered shortcuts
+  </Step>
+  <Step title="Show warning">
+    If a conflict exists, a warning appears with details about the conflicting shortcut
+    
+    Implementation: `HotkeySettingsControlHook.cs`
+  </Step>
+  <Step title="Choose action">
+    You can:
+    - Change your shortcut
+    - Change the conflicting shortcut
+    - Ignore the conflict (if not a system conflict)
+  </Step>
+  <Step title="Save preference">
+    Ignored conflicts are saved in `GeneralSettings.IgnoredConflictProperties`
+  </Step>
+</Steps>
+
+### Accessing conflict information
+
+Conflicts are surfaced through the `GetAllHotkeySettings()` method implemented by each ViewModel:
+
+```csharp
+// From ColorPickerViewModel.cs:92-99
+public override Dictionary<string, HotkeySettings[]> GetAllHotkeySettings()
+{
+    var hotkeysDict = new Dictionary<string, HotkeySettings[]>
+    {
+        [ModuleName] = [ActivationShortcut],
+    };
+    
+    return hotkeysDict;
+}
+```
+
+## Advanced customization
+
+### Per-application shortcuts
+
+Keyboard Manager allows remapping shortcuts differently for specific applications:
+
+<Info>
+This is managed separately through Keyboard Manager's UI and stored in `default.json` in the Keyboard Manager folder.
+
+See the Keyboard Manager documentation for details.
+</Info>
+
+### Disabling shortcuts
+
+To disable a utility's shortcut without disabling the utility:
+
+1. Clear the shortcut field in Settings UI
+2. The shortcut will be set to an empty state (`Code = 0`)
+3. The utility remains enabled but has no activation shortcut
+
+```json
+{
+  "win": false,
+  "ctrl": false,
+  "alt": false,
+  "shift": false,
+  "code": 0
+}
+```
+
+### Group Policy override
+
+Shortcuts can be controlled via GPO for enterprise deployments. See [Group Policy](/configuration/group-policy) for details.
+
+## Shortcut best practices
+
+<CardGroup cols={2}>
+  <Card title="Use Win key" icon="windows">
+    Windows key combinations are less likely to conflict with applications
+  </Card>
+  <Card title="Avoid common combos" icon="ban">
+    Stay away from Ctrl+C, Ctrl+V, Alt+F4, and other standard shortcuts
+  </Card>
+  <Card title="Be consistent" icon="check">
+    Use similar patterns across utilities (e.g., Win+Shift for activation)
+  </Card>
+  <Card title="Test thoroughly" icon="vial">
+    Verify shortcuts work in your most-used applications
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Shortcut not working
+
+<AccordionGroup>
+  <Accordion title="PowerToys not running elevated">
+    Some shortcuts don't work with elevated applications unless PowerToys runs elevated
+    
+    **Solution:** Enable "Run as administrator" in General settings
+  </Accordion>
+  
+  <Accordion title="Conflicting application">
+    Another application may be capturing the shortcut first
+    
+    **Solution:** Use a different shortcut or check the other application's settings
+  </Accordion>
+  
+  <Accordion title="Utility disabled">
+    The utility must be enabled for its shortcut to work
+    
+    **Solution:** Check the utility's enabled state in Settings or Dashboard
+  </Accordion>
+  
+  <Accordion title="GPO restriction">
+    Group Policy may be preventing shortcut customization
+    
+    **Solution:** Contact your system administrator
+  </Accordion>
+</AccordionGroup>
+
+### Shortcut conflict detection not working
+
+If conflicts aren't being detected:
+
+1. Restart PowerToys to refresh the shortcut registry
+2. Check logs at `%LOCALAPPDATA%\Microsoft\PowerToys\Logs`
+3. Manually review `settings.json` for duplicate shortcuts
+
+## Related documentation
+
+<CardGroup cols={2}>
+  <Card title="Settings overview" icon="gear" href="/configuration/settings-overview">
+    Learn about PowerToys configuration architecture
+  </Card>
+  <Card title="Group Policy" icon="shield" href="/configuration/group-policy">
+    Control shortcuts via enterprise policy
+  </Card>
+</CardGroup>

@@ -1,0 +1,369 @@
+---
+title: 'Installation'
+description: 'Complete installation guide for Microsoft PowerToys with multiple installation methods, system requirements, and troubleshooting'
+---
+
+# Installing Microsoft PowerToys
+
+Microsoft PowerToys is a collection of utilities that help you customize Windows and streamline everyday tasks. This guide covers all installation methods, system requirements, and common troubleshooting steps.
+
+## System Requirements
+
+Before installing PowerToys, ensure your system meets these requirements:
+
+- **Operating System**: Windows 10 version 1803 (April 2018 Update) or newer, or Windows 11
+- **Architecture**: x64 or ARM64
+- **.NET**: Automatically installed with PowerToys if not present
+- **WebView2**: Automatically installed with PowerToys if not present
+
+<Note>
+PowerToys requires Windows 10 1803+ (April 2018 Update or newer). Older versions of Windows are not supported.
+</Note>
+
+## Installation Methods
+
+Choose the installation method that best fits your workflow:
+
+### Method 1: WinGet (Recommended)
+
+WinGet is the official Windows package manager and provides the easiest installation and update experience.
+
+<Steps>
+  <Step title="Install PowerToys (User Scope)">
+    Open PowerShell or Command Prompt and run:
+    
+    ```powershell
+    winget install Microsoft.PowerToys -s winget
+    ```
+    
+    This installs PowerToys for your user account only.
+  </Step>
+  
+  <Step title="Install PowerToys (Machine-Wide)">
+    For system-wide installation (requires administrator privileges):
+    
+    ```powershell
+    winget install --scope machine Microsoft.PowerToys -s winget
+    ```
+    
+    This installs PowerToys for all users on the machine.
+  </Step>
+  
+  <Step title="Verify Installation">
+    After installation completes, PowerToys will launch automatically. You'll see the PowerToys icon in your system tray.
+  </Step>
+</Steps>
+
+<Info>
+Updating PowerToys via WinGet respects your current installation scope. If you installed for your user, updates will maintain that scope.
+</Info>
+
+### Method 2: Microsoft Store
+
+The Microsoft Store provides automatic updates and easy installation.
+
+<Steps>
+  <Step title="Open Microsoft Store">
+    Search for "PowerToys" in the Microsoft Store or visit [aka.ms/getPowertoys](https://aka.ms/getPowertoys)
+  </Step>
+  
+  <Step title="Install">
+    Click the "Get" or "Install" button. The Store will handle all dependencies automatically.
+  </Step>
+  
+  <Step title="Launch">
+    Once installed, launch PowerToys from the Start menu or let it start automatically.
+  </Step>
+</Steps>
+
+<Tip>
+Microsoft Store installations receive automatic updates, ensuring you always have the latest features and security fixes.
+</Tip>
+
+### Method 3: GitHub Releases
+
+Download the installer directly from GitHub for offline installation or specific version requirements.
+
+<Steps>
+  <Step title="Navigate to Releases">
+    Visit [PowerToys GitHub releases](https://aka.ms/installPowerToys) and find the latest version (currently v0.97.1).
+  </Step>
+  
+  <Step title="Download Installer">
+    Click "Assets" to reveal downloads and choose the appropriate installer:
+    
+    | Description | Architecture | Filename |
+    |-------------|--------------|----------|
+    | Per user - x64 | Intel/AMD 64-bit | `PowerToysUserSetup-0.97.1-x64.exe` |
+    | Per user - ARM64 | ARM 64-bit | `PowerToysUserSetup-0.97.1-arm64.exe` |
+    | Machine wide - x64 | Intel/AMD 64-bit | `PowerToysSetup-0.97.1-x64.exe` |
+    | Machine wide - ARM64 | ARM 64-bit | `PowerToysSetup-0.97.1-arm64.exe` |
+    
+    <Note>
+    Most users should download the **Per user - x64** installer unless you're on an ARM device or need system-wide installation.
+    </Note>
+  </Step>
+  
+  <Step title="Run Installer">
+    Double-click the downloaded `.exe` file and follow the installation wizard. Accept the license agreement and choose your installation preferences.
+  </Step>
+  
+  <Step title="Complete Setup">
+    The installer will install all required dependencies and launch PowerToys automatically.
+  </Step>
+</Steps>
+
+### Method 4: Chocolatey
+
+Chocolatey is a community-driven package manager for Windows.
+
+<Warning>
+Chocolatey is a community-maintained installation method. The PowerToys team does not directly manage or update this package.
+</Warning>
+
+<CodeGroup>
+```powershell Install
+choco install powertoys
+```
+
+```powershell Upgrade
+choco upgrade powertoys
+```
+</CodeGroup>
+
+For issues with the Chocolatey package, visit the [package page](https://chocolatey.org/packages/powertoys) and follow the [Chocolatey triage process](https://chocolatey.org/docs/package-triage-process).
+
+### Method 5: Scoop
+
+Scoop is another community-driven package manager with a focus on developer tools.
+
+<Warning>
+Scoop is a community-maintained installation method. The PowerToys team does not directly manage or update this package.
+</Warning>
+
+<CodeGroup>
+```powershell Install
+scoop install powertoys
+```
+
+```powershell Update
+scoop update powertoys
+```
+</CodeGroup>
+
+## Installation Scopes: User vs Machine-Wide
+
+PowerToys offers two installation scopes:
+
+### Per User Installation (Recommended)
+- Installs to: `%LOCALAPPDATA%\Microsoft\PowerToys`
+- No administrator privileges required
+- Updates automatically without admin prompts
+- Isolated to your user account
+- **Recommended for most users**
+
+### Machine-Wide Installation
+- Installs to: `C:\Program Files\PowerToys`
+- Requires administrator privileges
+- Available to all users on the system
+- Useful for enterprise deployments
+- Updates require administrator privileges
+
+<Info>
+You cannot mix installation scopes. If you have a per-user installation and try to install machine-wide (or vice versa), the installer will detect the conflict and prompt you to uninstall the existing version first.
+</Info>
+
+## Post-Installation Setup
+
+After installing PowerToys:
+
+1. **Launch PowerToys**: The application launches automatically after installation. Look for the PowerToys icon in your system tray (near the clock).
+
+2. **Configure Startup**: By default, PowerToys starts with Windows. You can change this in the PowerToys Settings under "General" > "Run at startup".
+
+3. **Review Utilities**: Open PowerToys Settings to review available utilities and enable the ones you want to use.
+
+4. **Check for Updates**: PowerToys includes an auto-update feature. Configure update preferences in Settings > General > Updates.
+
+## Troubleshooting
+
+### Installation Fails or Won't Start
+
+<Steps>
+  <Step title="Check System Requirements">
+    Verify you're running Windows 10 version 1803 or newer:
+    
+    ```powershell
+    winver
+    ```
+    
+    The version number should be 1803 or higher.
+  </Step>
+  
+  <Step title="Install WebView2">
+    Some features require WebView2. Download and install it manually:
+    
+    [Download WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section)
+  </Step>
+  
+  <Step title="Check .NET Requirements">
+    Ensure .NET Desktop Runtime is installed. PowerToys uses .NET 8.0.
+    
+    [Download .NET Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
+  </Step>
+  
+  <Step title="Run as Administrator">
+    Try running the installer as administrator (right-click > "Run as administrator").
+  </Step>
+</Steps>
+
+### Mixed Installation Scope Error
+
+**Problem**: Error message about conflicting per-user and machine-wide installations.
+
+**Solution**:
+1. Uninstall the existing PowerToys installation via Windows Settings > Apps
+2. Remove any remaining files from:
+   - `%LOCALAPPDATA%\Microsoft\PowerToys`
+   - `C:\Program Files\PowerToys`
+3. Reinstall using your preferred installation scope
+
+### Context Menu Integration Not Working
+
+**Problem**: PowerRename, Image Resizer, or other context menu features don't appear.
+
+**Solution**:
+<Steps>
+  <Step title="Restart File Explorer">
+    Open Task Manager (Ctrl+Shift+Esc), find "Windows Explorer", right-click, and select "Restart".
+  </Step>
+  
+  <Step title="Re-enable Utilities">
+    Open PowerToys Settings, disable and re-enable the affected utility (e.g., PowerRename, Image Resizer).
+  </Step>
+  
+  <Step title="Repair Installation">
+    If issues persist, repair the installation:
+    - WinGet: Run the install command again
+    - Microsoft Store: Right-click PowerToys in your library and select "Repair"
+    - GitHub installer: Download and run the installer again
+  </Step>
+</Steps>
+
+### PowerToys Not Responding After Update
+
+**Problem**: PowerToys becomes unresponsive or crashes after an update.
+
+**Solution**:
+1. Close PowerToys completely (right-click system tray icon > Exit)
+2. Navigate to `%LOCALAPPDATA%\Microsoft\PowerToys` (per-user) or `C:\Program Files\PowerToys` (machine-wide)
+3. Delete the `settings` folder (your settings will reset to defaults)
+4. Restart PowerToys
+
+### Utilities Not Working on Windows 10
+
+**Problem**: Some utilities (like Image Resizer) stop working after upgrade on Windows 10.
+
+**Solution**: This was a known issue in v0.97.0, fixed in v0.97.2. Ensure you're running the latest version:
+
+```powershell
+winget upgrade Microsoft.PowerToys
+```
+
+### Hotkeys Conflict with Other Applications
+
+**Problem**: PowerToys keyboard shortcuts don't work or conflict with other apps.
+
+**Solution**:
+1. Open PowerToys Settings
+2. Navigate to the specific utility (e.g., PowerToys Run)
+3. Click the hotkey field and press your desired key combination
+4. If conflicts are detected, PowerToys will warn you
+5. Choose a different, non-conflicting shortcut
+
+<Warning>
+Some system shortcuts like Win+L (lock screen) and Ctrl+Alt+Del cannot be remapped as they're handled at a lower level by Windows.
+</Warning>
+
+## Uninstalling PowerToys
+
+To completely remove PowerToys:
+
+### Via Windows Settings
+1. Open Settings > Apps > Installed apps (Windows 11) or Apps & features (Windows 10)
+2. Search for "PowerToys"
+3. Click the three dots menu > Uninstall
+4. Follow the uninstallation wizard
+
+### Via WinGet
+```powershell
+winget uninstall Microsoft.PowerToys
+```
+
+### Via Chocolatey
+```powershell
+choco uninstall powertoys
+```
+
+### Via Scoop
+```powershell
+scoop uninstall powertoys
+```
+
+### Clean Uninstall
+
+For a complete removal including all settings:
+
+1. Uninstall via your preferred method above
+2. Delete remaining folders:
+   - `%LOCALAPPDATA%\Microsoft\PowerToys`
+   - `%APPDATA%\Microsoft\PowerToys`
+   - `C:\Program Files\PowerToys` (if machine-wide install)
+3. Restart your computer
+
+## Enterprise Deployment
+
+For IT administrators deploying PowerToys across an organization:
+
+### Group Policy Support
+
+PowerToys includes ADMX templates for Group Policy management. Templates are located in the installation directory under `gpo` folder.
+
+### Silent Installation
+
+```powershell Per-User Silent Install
+PowerToysUserSetup-0.97.1-x64.exe /silent /install
+```
+
+```powershell Machine-Wide Silent Install
+PowerToysSetup-0.97.1-x64.exe /silent /install
+```
+
+### Deployment via Microsoft Intune
+
+1. Download the appropriate installer from GitHub releases
+2. Package as a Win32 app in Microsoft Intune
+3. Configure installation command: `/silent /install`
+4. Set detection rules to check for PowerToys executable
+5. Deploy to target device groups
+
+<Info>
+For detailed GPO and enterprise deployment information, see the [official Microsoft Learn documentation](https://learn.microsoft.com/windows/powertoys/install#group-policy-objects).
+</Info>
+
+## Next Steps
+
+Now that PowerToys is installed:
+
+- [Get started with PowerToys Run](/quickstart) - Learn the essential utilities
+- [Configure utilities](/configuration/overview) - Customize PowerToys to your needs
+- [Explore all utilities](/utilities/overview) - Discover what PowerToys can do
+
+## Getting Help
+
+If you encounter issues not covered in this guide:
+
+- **Report bugs**: [GitHub Issues](https://github.com/microsoft/PowerToys/issues)
+- **Join discussions**: [GitHub Discussions](https://github.com/microsoft/PowerToys/discussions)
+- **Documentation**: [Microsoft Learn](https://learn.microsoft.com/windows/powertoys/)
+- **Release notes**: [PowerToys Blog](https://aka.ms/powertoys-releaseblog)

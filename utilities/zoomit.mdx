@@ -1,0 +1,543 @@
+---
+title: ZoomIt
+description: A screen zoom, annotation, and presentation tool perfect for demos, presentations, and teaching.
+---
+
+ZoomIt is a screen zoom and annotation tool designed for technical presentations and demonstrations. Zoom into any part of your screen, draw on it with annotations, and use type-mode to simulate keyboard input from a script.
+
+## Activation
+
+<Steps>
+  <Step title="Zoom Mode">
+    Press `Ctrl + 1` to activate zoom mode (default).
+  </Step>
+  <Step title="Draw Mode">
+    Press `Ctrl + 2` to enter draw/annotation mode.
+  </Step>
+  <Step title="Type Mode">
+    Press `Ctrl + 3` to activate demo-type mode.
+  </Step>
+  <Step title="Live Zoom">
+    Press `Ctrl + 4` for live zoom (follows cursor).
+  </Step>
+</Steps>
+
+<Note>
+  All shortcuts are customizable in PowerToys Settings > ZoomIt.
+</Note>
+
+## Features
+
+### Zoom Mode
+
+Magnify any part of your screen for better visibility during presentations.
+
+<Tabs>
+  <Tab title="Basic Zoom">
+    **Activate:** `Ctrl + 1`
+    
+    - Move mouse to zoom into different areas
+    - Scroll wheel to adjust zoom level
+    - Click to exit zoom mode
+    - Screen freezes at zoom activation
+  </Tab>
+  
+  <Tab title="Zoom Controls">
+    While in zoom mode:
+    
+    | Key | Action |
+    |-----|--------|
+    | `↑` `↓` | Zoom in/out |
+    | Mouse scroll | Adjust zoom level |
+    | Mouse move | Pan zoomed area |
+    | `Esc` or Click | Exit zoom |
+    | `Ctrl + C` | Copy zoomed region |
+  </Tab>
+  
+  <Tab title="Live Zoom">
+    **Activate:** `Ctrl + 4`
+    
+    - Zoom follows cursor in real-time
+    - Screen not frozen - live update
+    - Useful for demonstrating mouse actions
+    - Can interact with applications while zoomed
+  </Tab>
+</Tabs>
+
+<Accordion title="Zoom Configuration">
+  Customize zoom behavior:
+  
+  - **Zoom factor:** How much to magnify (2x, 3x, 4x, etc.)
+  - **Zoom window size:** Portion of screen to magnify
+  - **Animation:** Smooth zoom in/out transitions
+  - **Background:** Area outside zoom region
+</Accordion>
+
+### Draw/Annotation Mode
+
+Draw directly on your screen during presentations.
+
+<Steps>
+  <Step title="Activate Drawing">
+    Press `Ctrl + 2` to enter annotation mode.
+  </Step>
+  <Step title="Draw Annotations">
+    Click and drag to draw freehand.
+  </Step>
+  <Step title="Use Drawing Tools">
+    Access shapes, lines, arrows, and text.
+  </Step>
+  <Step title="Exit">
+    Press `Esc` to clear annotations and exit.
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Drawing Tools" icon="pen">
+    - Freehand drawing
+    - Straight lines
+    - Arrows
+    - Rectangles
+    - Ellipses
+    - Text annotations
+  </Card>
+  
+  <Card title="Drawing Controls" icon="sliders">
+    - Color selection
+    - Line thickness
+    - Eraser tool
+    - Undo/redo
+    - Clear all
+  </Card>
+</CardGroup>
+
+<Accordion title="Drawing Keyboard Shortcuts">
+  While in draw mode:
+  
+  | Key | Action |
+  |-----|--------|
+  | Mouse drag | Draw freehand |
+  | `Shift` + drag | Draw straight line |
+  | `Ctrl` + drag | Draw arrow |
+  | `Tab` | Change color |
+  | `R` | Draw rectangle |
+  | `E` | Draw ellipse |
+  | `T` | Add text |
+  | `Ctrl + Z` | Undo |
+  | `Ctrl + Y` | Redo |
+  | `Ctrl + C` | Copy screenshot with annotations |
+  | `E` key | Eraser mode |
+  | `Esc` | Clear and exit |
+</Accordion>
+
+### Demo Type Mode
+
+Simulate typing from a script for demonstrations and tutorials.
+
+From source `/src/modules/ZoomIt/ZoomIt/DemoType.h:14-26`:
+
+<CodeGroup>
+```cpp Demo Type Constants
+#define MAX_INPUT_SIZE      1048576  // 1 MiB
+#define MAX_TYPING_SPEED    10       // ms
+#define MIN_TYPING_SPEED    100      // ms
+
+int StartDemoType(const TCHAR* filePath, 
+                  const DWORD speedSlider, 
+                  const BOOLEAN userDriven);
+```
+</CodeGroup>
+
+<Steps>
+  <Step title="Create Script">
+    Prepare a text file with the content to "type" (max 1 MB).
+  </Step>
+  <Step title="Activate Type Mode">
+    Press `Ctrl + 3` to start demo-type mode.
+  </Step>
+  <Step title="Select Script">
+    Choose your script file when prompted.
+  </Step>
+  <Step title="Control Playback">
+    Use keyboard to control typing speed and progression.
+  </Step>
+</Steps>
+
+<Tabs>
+  <Tab title="Auto Type">
+    **Automated typing:**
+    
+    - Set typing speed (10-100 ms per character)
+    - Script types automatically
+    - Natural typing simulation
+    - Pauses at punctuation
+  </Tab>
+  
+  <Tab title="Manual Type">
+    **User-driven mode:**
+    
+    - Each keypress types next character
+    - Full control over timing
+    - Pause anytime
+    - Perfect for live explanations
+  </Tab>
+</Tabs>
+
+<Accordion title="Type Mode Controls">
+  During demo-type:
+  
+  | Key | Action |
+  |-----|--------|
+  | Any key | Type next character (manual mode) |
+  | `↑` | Increase typing speed |
+  | `↓` | Decrease typing speed |
+  | `Space` | Pause/resume (auto mode) |
+  | `Esc` | Exit type mode |
+</Accordion>
+
+<Warning>
+  Demo Type file size is limited to 1 MB. Larger files will fail to load.
+  
+  From source `/src/modules/ZoomIt/ZoomIt/DemoType.h:15`
+</Warning>
+
+### Screen Recording
+
+Record screen with annotations and zoom.
+
+From source files:
+- GIF recording: `/src/modules/ZoomIt/ZoomIt/GifRecordingSession.h`, `GifRecordingSession.cpp`
+- Audio capture: `/src/modules/ZoomIt/ZoomIt/LoopbackCapture.h`, `LoopbackCapture.cpp`
+
+<Accordion title="Recording Features">
+  - **GIF recording:** Capture to animated GIF
+  - **Audio loopback:** Record system audio
+  - **Frame capture:** Control frame rate and quality
+  - **Annotations:** Draw while recording
+  - **Zoom recording:** Record zoomed regions
+  
+  Implementation:
+  - `GifRecordingSession.cpp` - GIF encoding and session management
+  - `LoopbackCapture.cpp` - Audio capture via WASAPI
+  - `AudioSampleGenerator.cpp` - Audio processing
+  - `CaptureFrameWait.cpp` - Frame timing
+</Accordion>
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Software Demonstrations">
+    **Product Demos:**
+    - Zoom into UI details
+    - Annotate specific features
+    - Highlight important buttons/menus
+    - Circle areas of interest
+    - Draw arrows to guide attention
+    
+    **Example:** Demo a new feature by zooming into the menu, drawing an arrow to the new option, and circling it.
+  </Accordion>
+  
+  <Accordion title="Teaching & Training">
+    **Educational Sessions:**
+    - Zoom into code or diagrams
+    - Annotate formulas or equations
+    - Highlight key concepts
+    - Use demo-type to show code without typos
+    - Record lessons with annotations
+    
+    **Example:** Teaching Python - use demo-type to "write" code perfectly while explaining each line.
+  </Accordion>
+  
+  <Accordion title="Technical Presentations">
+    **Conference Talks:**
+    - Emphasize code snippets
+    - Draw diagrams on slides
+    - Annotate architecture diagrams
+    - Zoom into terminal output
+    - Highlight error messages
+    
+    **Example:** During conference talk, zoom into terminal, highlight specific output line, draw box around it.
+  </Accordion>
+  
+  <Accordion title="Troubleshooting Support">
+    **Remote Assistance:**
+    - Zoom into error messages
+    - Annotate screenshots
+    - Circle problem areas
+    - Draw step-by-step instructions
+    - Record issue reproduction
+    
+    **Example:** During screen share, zoom into error dialog, circle error code, annotate solution steps.
+  </Accordion>
+  
+  <Accordion title="Video Creation">
+    **Tutorial Videos:**
+    - Record screen with zoom
+    - Add annotations during recording
+    - Create GIF tutorials
+    - Demonstrate click sequences
+    - Show keyboard shortcuts visually
+    
+    **Example:** Create GIF showing how to use a feature - zoom, annotate, record to GIF, share.
+  </Accordion>
+</AccordionGroup>
+
+## Configuration
+
+### Activation Shortcuts
+
+Customize all ZoomIt shortcuts in PowerToys Settings:
+
+| Function | Default | Customizable |
+|----------|---------|-------------|
+| Zoom mode | `Ctrl + 1` | Yes |
+| Draw mode | `Ctrl + 2` | Yes |
+| Type mode | `Ctrl + 3` | Yes |
+| Live zoom | `Ctrl + 4` | Yes |
+| Recording | `Ctrl + 5` | Yes |
+
+### Appearance Settings
+
+<AccordionGroup>
+  <Accordion title="Zoom Appearance">
+    - Zoom magnification level
+    - Zoom window size and shape
+    - Background dim level
+    - Smooth zoom animation
+    - Cursor visibility in zoom
+  </Accordion>
+  
+  <Accordion title="Drawing Appearance">
+    - Default pen color
+    - Line thickness
+    - Available colors
+    - Background transparency
+    - Annotation persistence
+  </Accordion>
+  
+  <Accordion title="Type Mode Appearance">
+    - Font and size
+    - Text color and background
+    - Typing speed range
+    - Cursor blink rate
+  </Accordion>
+</AccordionGroup>
+
+### Recording Settings
+
+- GIF frame rate
+- Output quality
+- Audio recording enabled/disabled
+- Save location
+- Maximum recording duration
+
+## Advanced Features
+
+### Audio Capture
+
+From source `/src/modules/ZoomIt/ZoomIt/LoopbackCapture.h`:
+
+<Accordion title="System Audio Recording">
+  ZoomIt can capture system audio during recording:
+  
+  - WASAPI loopback capture
+  - Records all system sounds
+  - Synchronized with video
+  - Configurable audio quality
+  
+  Implementation: `LoopbackCapture.cpp` - Handles audio capture session
+</Accordion>
+
+### Audio Sample Generation
+
+From source `/src/modules/ZoomIt/ZoomIt/AudioSampleGenerator.h`:
+
+<Accordion title="Audio Processing">
+  - Sample rate conversion
+  - Audio format handling
+  - Buffer management
+  - Synchronization with frames
+  
+  Implementation: `AudioSampleGenerator.cpp`
+</Accordion>
+
+### Frame Capture Timing
+
+From source `/src/modules/ZoomIt/ZoomIt/CaptureFrameWait.h`:
+
+<Accordion title="Frame Timing Control">
+  Precise frame capture timing:
+  
+  - Consistent frame rates
+  - Adjustable FPS
+  - Frame skip handling
+  - Performance optimization
+  
+  Implementation: `CaptureFrameWait.cpp`
+</Accordion>
+
+## Keyboard Shortcuts Reference
+
+### Global Shortcuts
+
+| Shortcut | Function |
+|----------|----------|
+| `Ctrl + 1` | Zoom mode |
+| `Ctrl + 2` | Draw mode |
+| `Ctrl + 3` | Type mode |
+| `Ctrl + 4` | Live zoom |
+| `Ctrl + 5` | Start/stop recording |
+| `Esc` | Exit current mode |
+
+### Zoom Mode Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `↑` | Zoom in |
+| `↓` | Zoom out |
+| Mouse scroll | Adjust zoom |
+| Mouse move | Pan view |
+| `Ctrl + C` | Copy zoomed region |
+| Click or `Esc` | Exit zoom |
+
+### Draw Mode Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Drag | Freehand draw |
+| `Shift` + drag | Straight line |
+| `Ctrl` + drag | Arrow |
+| `R` | Rectangle |
+| `E` | Ellipse |
+| `T` | Text |
+| `Tab` | Change color |
+| `Ctrl + Z` | Undo |
+| `Ctrl + Y` | Redo |
+| `Ctrl + C` | Copy with annotations |
+| `Esc` | Clear and exit |
+
+### Type Mode Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Any key | Type next character (manual) |
+| `↑` | Faster typing |
+| `↓` | Slower typing |
+| `Space` | Pause/resume (auto) |
+| `Esc` | Exit type mode |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ZoomIt Not Activating">
+    **Checklist:**
+    - Ensure ZoomIt is enabled in PowerToys Settings
+    - Check activation shortcuts aren't conflicting
+    - Verify PowerToys is running
+    - Try different shortcut combinations
+    - Restart PowerToys
+    
+    **Common conflicts:** `Ctrl + 1/2/3` may conflict with browser tabs or other apps.
+  </Accordion>
+  
+  <Accordion title="Zoom Quality Issues">
+    **Problems:**
+    - Pixelated zoom on high-DPI displays
+    - Blurry magnification
+    - Performance lag during zoom
+    
+    **Solutions:**
+    - Reduce zoom magnification level
+    - Close resource-intensive applications
+    - Check display scaling settings
+    - Update graphics drivers
+  </Accordion>
+  
+  <Accordion title="Drawing Not Working">
+    **Issues:**
+    - Can't draw annotations
+    - Pen not appearing
+    - Colors not changing
+    
+    **Fixes:**
+    - Verify you're in draw mode (`Ctrl + 2`)
+    - Check mouse/stylus is working
+    - Try different drawing tool (press R, E, T)
+    - Reset ZoomIt settings
+  </Accordion>
+  
+  <Accordion title="Type Mode File Errors**">
+    **Error Messages:**
+    - "Error loading file": File not found or inaccessible
+    - "File size overflow": File exceeds 1 MB limit
+    - "Unknown file data": File encoding not supported
+    
+    **Solutions:**
+    - Verify file path is correct
+    - Reduce file size (under 1 MB)
+    - Save file as plain text (UTF-8 or ASCII)
+    - Check file permissions
+  </Accordion>
+  
+  <Accordion title="Recording Issues">
+    **Problems:**
+    - GIF not saving
+    - Audio not captured
+    - Recording stops unexpectedly
+    
+    **Fixes:**
+    - Check save location has disk space
+    - Verify audio recording is enabled in settings
+    - Reduce recording quality for longer recordings
+    - Close other recording software
+    - Check Windows audio device settings
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Presentation Tips">
+    **Effective Use:**
+    
+    1. **Plan zoom areas** - Know what you'll magnify before presenting
+    2. **Practice annotations** - Try drawing tools before live demo
+    3. **Prepare type scripts** - Write and test demo-type files beforehand
+    4. **Test shortcuts** - Verify ZoomIt shortcuts don't conflict
+    5. **Use colors wisely** - Choose high-contrast annotation colors
+  </Accordion>
+  
+  <Accordion title="Teaching Workflows">
+    **Educational Best Practices:**
+    
+    - Zoom into code to explain specific lines
+    - Use demo-type for complex code to avoid typos
+    - Annotate diagrams with arrows and circles
+    - Record GIF tutorials for asynchronous learning
+    - Combine zoom + annotations for maximum clarity
+  </Accordion>
+  
+  <Accordion title="Recording Recommendations">
+    **Creating Tutorials:**
+    
+    - Keep recordings short (under 2 minutes for GIFs)
+    - Plan recording content and flow
+    - Use annotations to highlight steps
+    - Test recording quality before final take
+    - Consider file size for sharing
+  </Accordion>
+</AccordionGroup>
+
+## Source Code
+
+Location: `/src/modules/ZoomIt/ZoomIt/`
+
+- Demo type: `DemoType.h`, `DemoType.cpp`
+- GIF recording: `GifRecordingSession.h`, `GifRecordingSession.cpp`
+- Audio capture: `LoopbackCapture.h`, `LoopbackCapture.cpp`
+- Audio processing: `AudioSampleGenerator.h`, `AudioSampleGenerator.cpp`
+- Frame timing: `CaptureFrameWait.h`, `CaptureFrameWait.cpp`
+
+<Note>
+  ZoomIt in PowerToys is based on the original Sysinternals ZoomIt by Mark Russinovich, now integrated into the PowerToys suite.
+</Note>

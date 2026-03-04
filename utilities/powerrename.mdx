@@ -1,0 +1,429 @@
+---
+title: PowerRename
+description: A bulk file renaming tool with support for regular expressions, search and replace, and live preview of changes.
+---
+
+PowerRename is a powerful bulk renaming tool for Windows File Explorer that supports search and replace with regular expressions. Preview your changes before applying them and rename multiple files simultaneously.
+
+## Activation
+
+<Steps>
+  <Step title="Select Files">
+    In File Explorer, select one or more files or folders you want to rename.
+  </Step>
+  <Step title="Open PowerRename">
+    Right-click the selected items and choose **PowerRename** from the context menu.
+  </Step>
+  <Step title="Configure Rename">
+    Enter search and replace patterns, enable options, and preview changes.
+  </Step>
+  <Step title="Apply Changes">
+    Click **Rename** to apply the changes to all selected files.
+  </Step>
+</Steps>
+
+<Note>
+  PowerRename appears as a context menu item only when files or folders are selected in File Explorer.
+</Note>
+
+## Core Features
+
+### Search and Replace
+
+<Tabs>
+  <Tab title="Simple Text">
+    Basic text search and replace:
+    
+    **Search for:** `vacation`
+    
+    **Replace with:** `holiday`
+    
+    Result: `vacation_2024.jpg` → `holiday_2024.jpg`
+  </Tab>
+  
+  <Tab title="Case Options">
+    Control case sensitivity and matching:
+    
+    - **Match all occurrences**: Replace every instance in filename
+    - **Case sensitive**: Distinguish between uppercase and lowercase
+    - **Match only whole words**: Avoid partial matches
+  </Tab>
+  
+  <Tab title="Empty Replace">
+    Leave "Replace with" empty to remove text:
+    
+    **Search for:** `_draft`
+    
+    **Replace with:** (empty)
+    
+    Result: `report_draft.docx` → `report.docx`
+  </Tab>
+</Tabs>
+
+### Regular Expressions
+
+PowerRename supports full regex patterns for advanced renaming operations.
+
+<Accordion title="Enable Regular Expressions">
+  Check the **Use regular expressions** option to enable regex mode.
+  
+  <Warning>
+    Regular expressions are powerful but complex. Test patterns carefully on a few files before applying to many files.
+  </Warning>
+</Accordion>
+
+#### Common Regex Patterns
+
+<CodeGroup>
+```regex Add Prefix
+Search for: ^(.+)
+Replace with: PREFIX_$1
+
+Example: file.txt → PREFIX_file.txt
+```
+
+```regex Add Suffix (Before Extension)
+Search for: (.+)(\..+)
+Replace with: $1_SUFFIX$2
+
+Example: photo.jpg → photo_SUFFIX.jpg
+```
+
+```regex Remove Numbers
+Search for: \d+
+Replace with: (empty)
+
+Example: file123.txt → file.txt
+```
+
+```regex Add Sequential Numbers
+Search for: (.*)
+Replace with: $1_${num}
+
+Example: file.txt → file_1.txt
+         photo.jpg → photo_2.jpg
+```
+
+```regex Extract Date Pattern
+Search for: (\d{4})-(\d{2})-(\d{2}).*
+Replace with: $1_$2_$3
+
+Example: 2024-03-15_vacation.jpg → 2024_03_15.jpg
+```
+
+```regex Change Delimiters
+Search for: (.+)_(.+)
+Replace with: $1-$2
+
+Example: my_file.txt → my-file.txt
+```
+
+```regex Remove Spaces
+Search for: \s+
+Replace with: _
+
+Example: my document.docx → my_document.docx
+```
+</CodeGroup>
+
+### Renaming Options
+
+<AccordionGroup>
+  <Accordion title="Search and Replace">
+    - **Match all occurrences**: Replace every match in the filename (not just the first)
+    - **Case sensitive**: Treat uppercase and lowercase as different
+    - **Use regular expressions**: Enable regex pattern matching
+  </Accordion>
+  
+  <Accordion title="Apply To">
+    Choose what parts of the filename to rename:
+    
+    - **Filename + Extension**: Rename the entire filename
+    - **Filename only**: Keep file extensions unchanged (recommended)
+    - **Extension only**: Change only file extensions
+  </Accordion>
+  
+  <Accordion title="Text Formatting">
+    - **Make uppercase**: Convert matched text to UPPERCASE
+    - **Make lowercase**: Convert matched text to lowercase
+    - **Make titlecase**: Capitalize The First Letter Of Each Word
+  </Accordion>
+  
+  <Accordion title="Item Selection">
+    - **Include files**: Rename files
+    - **Include folders**: Rename folders
+    - **Include subfolders**: Process items in subdirectories
+    - **Exclude items**: Skip specific files or folders using patterns
+  </Accordion>
+</AccordionGroup>
+
+## Live Preview
+
+PowerRename shows a live preview of all rename operations before you apply them.
+
+<Tabs>
+  <Tab title="Preview List">
+    The preview list shows:
+    - Original filename (left column)
+    - New filename after rename (right column)
+    - Checkboxes to include/exclude individual items
+    - Highlighted differences between old and new names
+  </Tab>
+  
+  <Tab title="Preview Filtering">
+    - **Show only renamed**: Hide items that won't change
+    - **Preview count**: See how many items will be renamed
+    - **Uncheck items**: Exclude specific files from the operation
+  </Tab>
+</Tabs>
+
+<Tip>
+  Changes highlighted in the preview show exactly what will be modified. Review carefully before clicking Rename.
+</Tip>
+
+## Pattern Snippets
+
+PowerRename includes pattern snippets for common renaming scenarios.
+
+Implementation: `/src/modules/powerrename/PowerRenameUILib/PatternSnippet.cpp`
+
+### Variable Substitution
+
+Use special variables in the "Replace with" field:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `$num` | Sequential number (1, 2, 3...) | `file_$num.txt` → `file_1.txt` |
+| `$001num` | Zero-padded number | `file_$001num.txt` → `file_001.txt` |
+| `$date` | Current date (YYYY-MM-DD) | `backup_$date.zip` |
+| `$time` | Current time (HH-MM-SS) | `log_$time.txt` |
+| `$parent` | Parent folder name | `$parent_file.txt` |
+
+<Note>
+  Variables are case-sensitive and must be typed exactly as shown.
+</Note>
+
+## Advanced Use Cases
+
+<AccordionGroup>
+  <Accordion title="Batch Photo Renaming">
+    Rename vacation photos with dates:
+    
+    **Files:**
+    ```
+    IMG_0001.jpg
+    IMG_0002.jpg
+    IMG_0003.jpg
+    ```
+    
+    **Pattern:**
+    - Search: `IMG_(\d+)`
+    - Replace: `Vacation_2024_$1`
+    - Use regex: Yes
+    
+    **Result:**
+    ```
+    Vacation_2024_0001.jpg
+    Vacation_2024_0002.jpg
+    Vacation_2024_0003.jpg
+    ```
+  </Accordion>
+  
+  <Accordion title="Clean Up Downloaded Files">
+    Remove website names and tracking codes:
+    
+    **Files:**
+    ```
+    document (1).pdf
+    report_final_v2 copy.docx
+    image-download-123abc.png
+    ```
+    
+    **Pattern:**
+    - Search: `\s*\(\d+\)|\s+copy|-download-[a-z0-9]+`
+    - Replace: (empty)
+    - Use regex: Yes
+    
+    **Result:**
+    ```
+    document.pdf
+    report_final_v2.docx
+    image.png
+    ```
+  </Accordion>
+  
+  <Accordion title="Add Sequential Numbers">
+    Add sequential numbering to files:
+    
+    **Pattern:**
+    - Search: `^(.+)(\..+)$`
+    - Replace: `$1_$001num$2`
+    - Use regex: Yes
+    
+    **Result:**
+    ```
+    chapter.txt → chapter_001.txt
+    chapter.txt → chapter_002.txt
+    chapter.txt → chapter_003.txt
+    ```
+  </Accordion>
+  
+  <Accordion title="Change File Extensions">
+    Rename .txt files to .md:
+    
+    **Settings:**
+    - Search: `txt`
+    - Replace: `md`
+    - Apply to: Extension only
+    
+    **Result:**
+    ```
+    readme.txt → readme.md
+    notes.txt → notes.md
+    ```
+  </Accordion>
+  
+  <Accordion title="Extract and Reorganize">
+    Extract date from filename and reorganize:
+    
+    **Files:**
+    ```
+    Report_2024-03-15_v1.docx
+    Report_2024-03-16_v1.docx
+    ```
+    
+    **Pattern:**
+    - Search: `Report_(\d{4})-(\d{2})-(\d{2})_v\d+`
+    - Replace: `$1$2$3_Report`
+    - Use regex: Yes
+    
+    **Result:**
+    ```
+    20240315_Report.docx
+    20240316_Report.docx
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Regex Reference
+
+### Common Patterns
+
+| Pattern | Matches | Example |
+|---------|---------|----------|
+| `.` | Any single character | `a.c` matches `abc`, `a1c` |
+| `*` | Zero or more of previous | `ab*` matches `a`, `ab`, `abb` |
+| `+` | One or more of previous | `ab+` matches `ab`, `abb` |
+| `?` | Zero or one of previous | `ab?` matches `a`, `ab` |
+| `\d` | Any digit (0-9) | `file\d` matches `file1` |
+| `\w` | Word character (a-z, 0-9, _) | `\w+` matches `file_1` |
+| `\s` | Whitespace (space, tab) | `\s` matches ` ` |
+| `^` | Start of string | `^file` matches start |
+| `$` | End of string | `txt$` matches end |
+| `[abc]` | Any character in brackets | `[aeiou]` matches vowels |
+| `[^abc]` | Not in brackets | `[^0-9]` matches non-digits |
+| `(...)` | Capture group | `(\d+)` captures numbers |
+| `$1, $2` | Backreference to groups | Use captured text |
+
+### Special Escape Sequences
+
+| Sequence | Meaning |
+|----------|----------|
+| `\.` | Literal dot |
+| `\\` | Literal backslash |
+| `\(` `\)` | Literal parentheses |
+| `\[` `\]` | Literal brackets |
+| `\^` `\$` | Literal ^ or $ |
+
+<Tip>
+  Use [regex101.com](https://regex101.com/) to test your patterns before applying them in PowerRename.
+</Tip>
+
+## Configuration
+
+### Settings
+
+Configure PowerRename behavior in PowerToys Settings:
+
+<Steps>
+  <Step title="Enable/Disable">
+    Toggle PowerRename on or off in PowerToys Settings > PowerRename.
+  </Step>
+  
+  <Step title="Default Options">
+    Set default values for:
+    - Use regular expressions
+    - Case sensitivity
+    - Match all occurrences
+  </Step>
+  
+  <Step title="Interface Options">
+    - Show PowerRename icon in File Explorer
+    - Enable extended context menu
+  </Step>
+</Steps>
+
+## Safety Features
+
+<Warning>
+  PowerRename operates directly on files and folders. Changes cannot be undone automatically.
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="Before Renaming">
+    - Always review the preview list carefully
+    - Test on a few files first before bulk operations
+    - Backup important files before major renaming
+    - Check that file extensions are preserved (if desired)
+  </Accordion>
+  
+  <Accordion title="During Renaming">
+    - Monitor the progress indicator
+    - Don't interrupt the process on network drives
+    - Watch for error messages or conflicts
+  </Accordion>
+  
+  <Accordion title="After Renaming">
+    - Verify results in File Explorer
+    - If mistakes occur, use Ctrl+Z in File Explorer immediately
+    - Some applications may need to be restarted to recognize renamed files
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Context Menu Not Showing">
+    - Ensure PowerRename is enabled in PowerToys Settings
+    - Restart File Explorer: Right-click taskbar > Task Manager > Restart "Windows Explorer"
+    - Check if files are selected (PowerRename only appears with selections)
+  </Accordion>
+  
+  <Accordion title="Regex Not Working">
+    - Verify "Use regular expressions" checkbox is enabled
+    - Check pattern syntax using online regex tester
+    - Escape special characters: `. * + ? ^ $ ( ) [ ] { } \ |`
+  </Accordion>
+  
+  <Accordion title="Some Files Not Renamed">
+    - Check if files are currently open in other applications
+    - Verify file permissions (read-only files cannot be renamed)
+    - Look for error messages in the preview list
+    - Some system files may be protected from renaming
+  </Accordion>
+  
+  <Accordion title="Variables Not Substituting">
+    - Ensure variables are typed exactly: `$num`, `$date`, etc.
+    - Variables are case-sensitive
+    - Some variables only work in replace field, not search field
+  </Accordion>
+</AccordionGroup>
+
+## Source Code
+
+Location: `/src/modules/powerrename/`
+
+- Context menu: `PowerRenameContextMenu/`
+- UI library: `PowerRenameUILib/`
+- Pattern snippets: `PowerRenameUILib/PatternSnippet.cpp`
+- Explorer integration: `PowerRenameUILib/ExplorerItemsSource.cpp`

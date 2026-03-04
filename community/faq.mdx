@@ -1,0 +1,628 @@
+---
+title: Frequently Asked Questions
+description: Common questions and answers about Microsoft PowerToys installation, usage, and troubleshooting
+---
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is Microsoft PowerToys?">
+    Microsoft PowerToys is a collection of utilities designed to help power users customize Windows and streamline everyday tasks. It includes over 25 tools for window management, file operations, productivity enhancements, and more.
+    
+    PowerToys is free, open-source, and actively developed by Microsoft with contributions from the community.
+  </Accordion>
+
+  <Accordion title="Is PowerToys safe to use?">
+    Yes, PowerToys is an official Microsoft project and is completely safe to use. It's:
+    
+    - Developed and maintained by Microsoft
+    - Open-source on [GitHub](https://github.com/microsoft/PowerToys)
+    - Regularly updated with security patches
+    - Available through official channels (Microsoft Store, GitHub, WinGet)
+    
+    PowerToys does collect basic diagnostic telemetry. See the [Privacy Statement](https://aka.ms/powertoys-data-and-privacy-documentation) for details on what data is collected.
+  </Accordion>
+
+  <Accordion title="What are the system requirements?">
+    **Minimum Requirements:**
+    - Windows 10 April 2018 Update (version 1803) or newer
+    - Windows 11 (any version)
+    - x64 or ARM64 processor architecture
+    
+    **Recommended:**
+    - Windows 11 for the best experience
+    - 4GB RAM or more
+    - Modern multi-core processor
+    
+    Some utilities have specific requirements:
+    - **File Explorer add-ons**: Require Windows 10 version 1903 or newer
+    - **Video Conference Mute**: Requires compatible webcam
+    - **PowerToys Run**: Better performance with SSD storage
+  </Accordion>
+
+  <Accordion title="Is PowerToys available for Windows 7 or 8?">
+    No, PowerToys requires Windows 10 version 1803 or newer. It is not compatible with:
+    - Windows 7
+    - Windows 8 or 8.1
+    - Windows 10 versions older than 1803
+    
+    This is due to dependencies on modern Windows APIs and frameworks like WinUI.
+  </Accordion>
+
+  <Accordion title="How much does PowerToys cost?">
+    PowerToys is completely free. It's an open-source project released under the MIT license, which means:
+    
+    - Free to download and use
+    - Free to modify and redistribute
+    - No subscriptions or in-app purchases
+    - No ads
+  </Accordion>
+</AccordionGroup>
+
+## Installation Questions
+
+<AccordionGroup>
+  <Accordion title="What are the different installation methods?">
+    PowerToys can be installed through multiple channels:
+    
+    **1. GitHub Releases** (Recommended for most users)
+    - Download from [GitHub releases](https://aka.ms/installPowerToys)
+    - Choose between per-user or machine-wide installation
+    - Available for x64 and ARM64 architectures
+    
+    **2. Microsoft Store**
+    - Search for "PowerToys" in the Microsoft Store
+    - Automatic updates through Store
+    - Installs per-user by default
+    
+    **3. WinGet**
+    ```powershell
+    # Per-user installation (default)
+    winget install Microsoft.PowerToys -s winget
+    
+    # Machine-wide installation
+    winget install --scope machine Microsoft.PowerToys -s winget
+    ```
+    
+    **4. Package Managers**
+    - Chocolatey: `choco install powertoys`
+    - Scoop: `scoop install powertoys`
+    
+    See the [installation documentation](https://learn.microsoft.com/windows/powertoys/install) for detailed instructions.
+  </Accordion>
+
+  <Accordion title="What's the difference between per-user and machine-wide installation?">
+    **Per-User Installation:**
+    - Installs in your user profile directory
+    - No administrator rights required
+    - Only available to your user account
+    - Recommended for most users
+    - Easier to update
+    
+    **Machine-Wide Installation:**
+    - Installs in Program Files
+    - Requires administrator privileges
+    - Available to all users on the computer
+    - Useful for enterprise deployments
+    - Can be managed via Group Policy
+    
+    <Warning>
+    Do not mix per-user and machine-wide installations. Uninstall the existing version before switching installation types.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="How do I update PowerToys?">
+    PowerToys supports automatic updates:
+    
+    **Automatic Updates:**
+    - Enabled by default
+    - Check for updates in the background
+    - Notification when new version is available
+    - Configure in Settings > General > Check for updates
+    
+    **Manual Updates:**
+    - Download latest version from [GitHub releases](https://aka.ms/installPowerToys)
+    - Run installer (it will upgrade existing installation)
+    - Or use your package manager:
+      - WinGet: `winget upgrade Microsoft.PowerToys`
+      - Chocolatey: `choco upgrade powertoys`
+    
+    **Microsoft Store:**
+    - Updates automatically through the Store
+    - Or manually check for updates in Store settings
+  </Accordion>
+
+  <Accordion title="Can I install PowerToys on multiple computers?">
+    Yes! PowerToys is free to install on as many computers as you like. However:
+    
+    - Settings are stored locally on each computer
+    - No built-in settings sync between machines
+    - You can manually backup/restore settings files from:
+      - `%LOCALAPPDATA%\Microsoft\PowerToys\`
+  </Accordion>
+
+  <Accordion title="How do I completely uninstall PowerToys?">
+    **Windows Settings:**
+    1. Open Settings > Apps > Installed apps
+    2. Search for "PowerToys"
+    3. Click the three dots and select "Uninstall"
+    
+    **Control Panel:**
+    1. Open Control Panel > Programs > Programs and Features
+    2. Find "PowerToys" in the list
+    3. Right-click and select "Uninstall"
+    
+    **Command Line:**
+    ```powershell
+    winget uninstall Microsoft.PowerToys
+    ```
+    
+    **Remove Settings (Optional):**
+    After uninstalling, you can delete settings and data:
+    ```powershell
+    Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\PowerToys" -Recurse -Force
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Usage Questions
+
+<AccordionGroup>
+  <Accordion title="How do I access PowerToys settings?">
+    Multiple ways to open settings:
+    
+    **System Tray:**
+    - Right-click the PowerToys icon in the system tray
+    - Select "Settings"
+    
+    **Start Menu:**
+    - Search for "PowerToys" in Start menu
+    - Click "PowerToys Settings"
+    
+    **Keyboard Shortcut:**
+    - No default shortcut, but you can create one:
+      1. Right-click PowerToys Settings shortcut
+      2. Properties > Shortcut tab
+      3. Set a shortcut key
+  </Accordion>
+
+  <Accordion title="Why isn't PowerToys starting automatically?">
+    Check these common issues:
+    
+    **1. Run at Startup Disabled:**
+    - Open PowerToys Settings
+    - Go to General tab
+    - Enable "Run at startup"
+    
+    **2. Task Manager Startup:**
+    - Open Task Manager (`Ctrl+Shift+Esc`)
+    - Go to Startup tab
+    - Ensure PowerToys is "Enabled"
+    
+    **3. Group Policy:**
+    - Your organization may disable startup apps
+    - Contact your IT administrator
+    
+    **4. Antivirus Software:**
+    - Some security software blocks startup apps
+    - Add PowerToys to your security software's exception list
+  </Accordion>
+
+  <Accordion title="How do I enable or disable individual utilities?">
+    Each PowerToys utility can be toggled on/off independently:
+    
+    1. Open PowerToys Settings
+    2. Click on a utility in the left sidebar
+    3. Use the toggle at the top of the page to enable/disable
+    
+    Disabling utilities you don't use:
+    - Reduces memory usage
+    - Eliminates unnecessary hotkeys
+    - Simplifies the interface
+    
+    <Tip>
+    You can quickly access individual utility settings from the system tray menu.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Can I use PowerToys on multiple monitors?">
+    Yes! Many PowerToys utilities are designed for multi-monitor setups:
+    
+    **FancyZones:**
+    - Create different layouts for each monitor
+    - Span zones across multiple monitors
+    - Per-monitor DPI awareness
+    
+    **Mouse Utilities (Find My Mouse, Mouse Highlighter):**
+    - Work across all monitors
+    - Detect mouse position on any screen
+    
+    **Cursor Wrap:**
+    - Wrap cursor across monitor boundaries
+    - Configure wrapping behavior per edge
+    
+    **Color Picker:**
+    - Pick colors from any monitor
+    - Follow cursor across screens
+    
+    **Screen Ruler:**
+    - Measure across multiple monitors
+    - Account for different DPI settings
+  </Accordion>
+
+  <Accordion title="How do I backup my PowerToys settings?">
+    Settings are stored as JSON files in your user profile:
+    
+    **Settings Location:**
+    ```
+    %LOCALAPPDATA%\Microsoft\PowerToys\Settings\
+    ```
+    
+    **To Backup:**
+    1. Close PowerToys completely
+    2. Copy the entire Settings folder to a safe location
+    3. Include the following directories:
+       - `settings-backup/`
+       - Individual utility folders (e.g., `FancyZones/`, `PowerRename/`)
+    
+    **To Restore:**
+    1. Close PowerToys
+    2. Copy backed-up files to the Settings folder
+    3. Restart PowerToys
+    
+    <Note>
+    Some utilities (like FancyZones) have export/import features built into their settings pages.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Utility-Specific Questions
+
+<AccordionGroup>
+  <Accordion title="How do I use PowerToys Run?">
+    PowerToys Run is a quick launcher for apps, files, and actions.
+    
+    **Basic Usage:**
+    1. Press `Alt+Space` (default shortcut)
+    2. Type your search query
+    3. Press `Enter` to launch, or arrow keys to navigate
+    
+    **Search Types:**
+    - **Applications**: Type app name (e.g., "chrome")
+    - **Files**: Search file names on indexed drives
+    - **Calculations**: Type math expressions (e.g., "2+2")
+    - **Web Search**: Start with `?` (e.g., "? weather")
+    - **Shell Commands**: Execute commands directly
+    
+    **Plugin Prefixes:**
+    - `>` - Shell commands
+    - `=` - Calculator
+    - `?` - Web search
+    - `:` - Registry keys
+    - `<` - Running processes
+    
+    Learn more in the [PowerToys Run documentation](/utilities/powertoys-run).
+  </Accordion>
+
+  <Accordion title="How do I create FancyZones layouts?">
+    FancyZones helps you organize windows into custom layouts.
+    
+    **Open Layout Editor:**
+    1. Open PowerToys Settings > FancyZones
+    2. Click "Launch layout editor"
+    3. Or press `Win+Shift+~` (tilde)
+    
+    **Create Layout:**
+    1. Click "Create new layout"
+    2. Choose template or grid
+    3. Customize zones by dragging edges
+    4. Name and save your layout
+    
+    **Apply Layout:**
+    1. Layouts are applied per monitor
+    2. Hold `Shift` while dragging windows
+    3. Drop window into highlighted zone
+    
+    **Tips:**
+    - Use grid layouts for quick setup
+    - Canvas layouts offer more flexibility
+    - Export layouts to share with others
+    
+    See the [FancyZones guide](/utilities/fancyzones) for detailed instructions.
+  </Accordion>
+
+  <Accordion title="Why isn't PowerRename showing in the context menu?">
+    If PowerRename doesn't appear when you right-click files:
+    
+    **1. Verify It's Enabled:**
+    - Open PowerToys Settings > PowerRename
+    - Ensure the toggle is on
+    
+    **2. Restart File Explorer:**
+    ```powershell
+    taskkill /f /im explorer.exe && start explorer.exe
+    ```
+    
+    **3. Check Windows Version:**
+    - Context menu handlers require Windows 10 1903+
+    - Won't work on older versions
+    
+    **4. Context Menu Settings (Windows 11):**
+    - Settings > PowerRename
+    - Enable "Show PowerRename in"
+    - Choose between extended context menu or main menu
+    
+    **5. Reinstall PowerToys:**
+    - Uninstall current version
+    - Restart computer
+    - Install fresh copy from GitHub
+    
+    **6. Check Group Policy:**
+    - Enterprise environments may block context menu extensions
+    - Contact IT administrator
+  </Accordion>
+
+  <Accordion title="How do I use Keyboard Manager to remap keys?">
+    Keyboard Manager lets you remap keys and create custom shortcuts.
+    
+    **Remap Individual Keys:**
+    1. Settings > Keyboard Manager
+    2. Click "Remap a key"
+    3. Select key to remap and its replacement
+    4. Click "OK"
+    
+    **Create Shortcuts:**
+    1. Click "Remap a shortcut"
+    2. Define your shortcut (e.g., `Ctrl+Shift+C`)
+    3. Choose action or key sequence
+    4. Click "OK"
+    
+    **Per-Application Remaps:**
+    - Create app-specific remaps
+    - Choose target application from dropdown
+    - Remaps only apply when that app is focused
+    
+    **Examples:**
+    - Swap `Caps Lock` with `Ctrl`
+    - Remap `F1` to avoid accidental help windows
+    - Create shortcuts to launch apps
+    
+    Learn more in the [Keyboard Manager documentation](/utilities/keyboard-manager).
+  </Accordion>
+
+  <Accordion title="What file types does Peek support?">
+    Peek provides quick file previews without opening applications.
+    
+    **Supported File Types:**
+    
+    **Images:**
+    - PNG, JPG, JPEG, GIF, BMP, TIFF
+    - SVG (rendered via WebView2)
+    - HEIF, HEIC, AVIF (with codec support)
+    - ICO, WebP
+    
+    **Documents:**
+    - PDF (via Windows PDF viewer)
+    - TXT, MD, LOG, INI, XML, JSON
+    - RTF (rich text format)
+    
+    **Media:**
+    - Video: MP4, AVI, WMV, MOV, MKV
+    - Audio: MP3, WAV, FLAC, M4A
+    
+    **Code:**
+    - HTML, CSS, JS, TS
+    - C, CPP, H, CS, PY, JAVA
+    - Many more (syntax highlighting included)
+    
+    **Archives:**
+    - ZIP, RAR, 7Z, TAR, GZ (with archive handler)
+    
+    **Activation:**
+    - Select file in File Explorer
+    - Press `Ctrl+Space` (default)
+    - Use arrow keys to navigate between files
+    
+    See [Peek documentation](/utilities/peek) for complete list.
+  </Accordion>
+</AccordionGroup>
+
+## Performance and Compatibility
+
+<AccordionGroup>
+  <Accordion title="Does PowerToys slow down my computer?">
+    PowerToys is designed to be lightweight, but impact varies:
+    
+    **Typical Resource Usage:**
+    - **RAM**: 50-200 MB depending on active utilities
+    - **CPU**: Minimal when idle, spikes during active use
+    - **Disk**: ~500 MB installation size
+    
+    **Tips to Reduce Impact:**
+    - Disable utilities you don't use
+    - Close FancyZones editor when not needed
+    - Limit PowerToys Run plugins
+    - Disable startup for non-essential utilities
+    
+    **Performance Settings:**
+    - Some utilities have performance options
+    - Example: FancyZones can disable animations
+    - Adjust in individual utility settings
+  </Accordion>
+
+  <Accordion title="Is PowerToys compatible with antivirus software?">
+    Generally yes, but some security software may flag PowerToys:
+    
+    **Common Issues:**
+    - Keyboard/mouse hooks detected as keyloggers
+    - Registry editing tools flagged
+    - Context menu handlers blocked
+    
+    **Solutions:**
+    1. Add PowerToys to antivirus exception list:
+       ```
+       C:\Program Files\PowerToys\
+       %LOCALAPPDATA%\PowerToys\
+       ```
+    2. Allow PowerToys processes in firewall
+    3. Trust PowerToys as legitimate Microsoft software
+    
+    **Known Compatible Software:**
+    - Windows Defender (fully compatible)
+    - Norton, McAfee, Kaspersky (may need exceptions)
+    - Enterprise antivirus (check with IT)
+  </Accordion>
+
+  <Accordion title="Can I use PowerToys with other productivity tools?">
+    Yes! PowerToys is designed to complement other tools:
+    
+    **Compatible With:**
+    - AutoHotkey (avoid conflicting hotkeys)
+    - ShareX (screen capture tools)
+    - Everything search (alternative indexing)
+    - DisplayFusion (monitor management)
+    - Clipboard managers (e.g., Ditto)
+    
+    **Potential Conflicts:**
+    - Global hotkeys may conflict
+    - Multiple window managers can interfere
+    - File Explorer extensions may overlap
+    
+    **Best Practices:**
+    - Review hotkeys to avoid conflicts
+    - Test compatibility before relying on both
+    - Disable overlapping features in one tool
+  </Accordion>
+
+  <Accordion title="Does PowerToys work in Remote Desktop sessions?">
+    Partial support - some utilities work, others don't:
+    
+    **Working Utilities:**
+    - PowerToys Run (with limitations)
+    - Color Picker
+    - Text Extractor
+    - PowerRename (on remote machine)
+    - Registry Preview
+    
+    **Limited/Non-Working:**
+    - FancyZones (window management conflicts)
+    - Mouse utilities (input is virtualized)
+    - Always on Top (window management issues)
+    - Keyboard Manager (input remapping problems)
+    
+    **Recommendation:**
+    Install PowerToys on the remote machine for best results. Using it from the local machine to control a remote session has limited support.
+  </Accordion>
+</AccordionGroup>
+
+## Getting Help
+
+<AccordionGroup>
+  <Accordion title="Where can I report bugs or request features?">
+    Report issues and suggest features on GitHub:
+    
+    **Bug Reports:**
+    1. Visit [PowerToys Issues](https://github.com/microsoft/PowerToys/issues)
+    2. Search for existing reports
+    3. Click "New Issue" > "Bug report"
+    4. Fill out the template with details
+    5. Include log files from "Report bug" in tray menu
+    
+    **Feature Requests:**
+    1. Search existing feature requests first
+    2. Click "New Issue" > "Feature request"
+    3. Describe the feature and use cases
+    4. Include mockups or examples if helpful
+    
+    **Before Filing:**
+    - Search existing issues to avoid duplicates
+    - Check release notes for known issues
+    - Verify your Windows version is supported
+  </Accordion>
+
+  <Accordion title="How do I generate log files for bug reports?">
+    PowerToys includes a bug report tool:
+    
+    **Generate Report:**
+    1. Right-click PowerToys tray icon
+    2. Select "Report bug"
+    3. Reproduce the issue if possible
+    4. Click "Submit" (creates ZIP file)
+    
+    **Manual Log Collection:**
+    Logs are stored in:
+    ```
+    %LOCALAPPDATA%\Microsoft\PowerToys\Logs\
+    ```
+    
+    **What's Included:**
+    - Application logs for all utilities
+    - System information
+    - Settings files (passwords removed)
+    - Recent error messages
+    
+    **Attach to GitHub Issue:**
+    1. Upload ZIP file when creating issue
+    2. Or use a file sharing service for large files
+    3. Never include sensitive information
+  </Accordion>
+
+  <Accordion title="Where can I find more documentation?">
+    Comprehensive documentation is available:
+    
+    **Official Documentation:**
+    - [PowerToys Documentation](https://aka.ms/powertoys-docs) - Microsoft Learn
+    - [GitHub Repository](https://github.com/microsoft/PowerToys) - Source code and issues
+    - [Release Notes](https://aka.ms/powertoys-releaseblog) - What's new in each version
+    
+    **Developer Resources:**
+    - [Contributing Guide](/community/contributing) - How to contribute
+    - [Dev Docs](https://github.com/microsoft/PowerToys/tree/main/doc/devdocs) - Development documentation
+    - [Architecture](https://github.com/microsoft/PowerToys/blob/main/doc/devdocs/core/architecture.md) - System architecture
+    
+    **Community:**
+    - [Discussions](https://github.com/microsoft/PowerToys/discussions) - Community forum
+    - [YouTube Channel](https://www.youtube.com/c/MicrosoftDeveloper) - Video tutorials
+  </Accordion>
+
+  <Accordion title="Is there community support available?">
+    Yes! The PowerToys community is active and helpful:
+    
+    **GitHub Discussions:**
+    - [PowerToys Discussions](https://github.com/microsoft/PowerToys/discussions)
+    - Ask questions and share tips
+    - Get help from other users
+    
+    **Social Media:**
+    - Follow updates on Twitter/X
+    - Join Windows enthusiast communities
+    - Watch for announcements on Microsoft blogs
+    
+    **Contributing:**
+    - Report bugs and suggest features
+    - Contribute code or documentation
+    - Help other users with issues
+    - See [Contributing Guide](/community/contributing)
+    
+    <Note>
+    Microsoft support for PowerToys is limited to GitHub resources. There is no direct phone or email support.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## More Resources
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="wrench" href="/community/troubleshooting">
+    Solve common problems and errors
+  </Card>
+  <Card title="Contributing" icon="code" href="/community/contributing">
+    Learn how to contribute to PowerToys
+  </Card>
+  <Card title="Installation Guide" icon="download" href="https://learn.microsoft.com/windows/powertoys/install">
+    Detailed installation instructions
+  </Card>
+  <Card title="Utilities Overview" icon="grid" href="/introduction">
+    Explore all PowerToys utilities
+  </Card>
+</CardGroup>

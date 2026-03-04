@@ -1,0 +1,562 @@
+---
+title: PowerToys Run Plugins
+description: Create custom plugins for PowerToys Run launcher with the IPlugin interface
+---
+
+# PowerToys Run Plugins
+
+PowerToys Run is a quick launcher that allows users to search for applications, files, and perform various actions. The plugin system enables developers to extend PowerToys Run with custom functionality.
+
+## Plugin Architecture
+
+PowerToys Run plugins are C# class libraries that implement the `IPlugin` interface from the `Wox.Plugin` namespace. Each plugin is loaded dynamically by PowerToys Run and can respond to user queries.
+
+### Core Interfaces
+
+#### IPlugin Interface
+
+Every plugin must implement the `IPlugin` interface:
+
+```csharp src/modules/launcher/Wox.Plugin/IPlugin.cs
+namespace Wox.Plugin
+{
+    public interface IPlugin
+    {
+        // Process user query and return results
+        List<Result> Query(Query query);
+
+        // Initialize plugin with context
+        void Init(PluginInitContext context);
+
+        // Localized plugin name
+        string Name { get; }
+
+        // Localized plugin description
+        string Description { get; }
+    }
+}
+```
+
+#### Optional Interfaces
+
+Plugins can implement additional interfaces for extended functionality:
+
+- **`IPluginI18n`** - Localization support
+- **`IContextMenu`** - Right-click context menu
+- **`ISettingProvider`** - Settings UI
+- **`IDelayedExecutionPlugin`** - Async query processing
+- **`IResultUpdated`** - Dynamic result updates
+
+## Creating Your First Plugin
+
+### Step 1: Create the Project
+
+Create a new C# class library project:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Wox.Plugin\Wox.Plugin.csproj" />
+  </ItemGroup>
+</Project>
+```
+
+**Naming Convention**:
+- Microsoft plugins: `Microsoft.PowerToys.Run.Plugin.{PluginName}`
+- Community plugins: `Community.PowerToys.Run.Plugin.{PluginName}`
+
+### Step 2: Implement the Plugin
+
+Create a `Main.cs` file:
+
+```csharp
+using System;
+using System.Collections.Generic;
+using Wox.Plugin;
+
+namespace Community.PowerToys.Run.Plugin.Example
+{
+    public class Main : IPlugin, IPluginI18n
+    {
+        public string Name => "Example Plugin";
+        public string Description => "An example PowerToys Run plugin";
+        
+        // Unique plugin ID (generate a new GUID for your plugin)
+        public static string PluginID => "12345678-1234-1234-1234-123456789012";
+
+        private PluginInitContext _context;
+        private string _iconPath;
+
+        public void Init(PluginInitContext context)
+        {
+            _context = context;
+            
+            // Set up theme-based icons
+            _context.API.ThemeChanged += OnThemeChanged;
+            UpdateIconPath(_context.API.GetCurrentTheme());
+        }
+
+        public List<Result> Query(Query query)
+        {
+            var results = new List<Result>();
+            
+            // Check if query is empty
+            if (string.IsNullOrEmpty(query.Search))
+            {
+                return results;
+            }
+
+            // Create a result
+            results.Add(new Result
+            {
+                Title = $"You searched: {query.Search}",
+                SubTitle = "Press Enter to copy to clipboard",
+                IcoPath = _iconPath,
+                Score = 100,
+                Action = context =>
+                {
+                    // Action to perform when user selects this result
+                    System.Windows.Clipboard.SetText(query.Search);
+                    return true; // Return true to close PowerToys Run
+                }
+            });
+
+            return results;
+        }
+
+        private void UpdateIconPath(Theme theme)
+        {
+            _iconPath = theme == Theme.Light || theme == Theme.HighContrastWhite
+                ? "Images/icon.light.png"
+                : "Images/icon.dark.png";
+        }
+
+        private void OnThemeChanged(Theme currentTheme, Theme newTheme)
+        {
+            UpdateIconPath(newTheme);
+        }
+
+        public string GetTranslatedPluginTitle() => Name;
+        public string GetTranslatedPluginDescription() => Description;
+    }
+}
+```
+
+### Step 3: Create plugin.json
+
+Create a `plugin.json` file in your project root:
+
+```json
+{
+  "ID": "12345678-1234-1234-1234-123456789012",
+  "ActionKeyword": "ex",
+  "IsGlobal": false,
+  "Name": "Example",
+  "Author": "Your Name",
+  "Version": "1.0.0",
+  "Language": "csharp",
+  "Website": "https://github.com/yourusername/your-plugin",
+  "ExecuteFileName": "Community.PowerToys.Run.Plugin.Example.dll",
+  "IcoPathDark": "Images\\icon.dark.png",
+  "IcoPathLight": "Images\\icon.light.png"
+}
+```
+
+**plugin.json Fields**:
+
+| Field | Description |
+|-------|-------------|
+| `ID` | Unique GUID for the plugin |
+| `ActionKeyword` | Keyword to activate plugin directly (e.g., `ex <query>`) |
+| `IsGlobal` | If true, plugin responds to all queries |
+| `Name` | Plugin name (must be unique) |
+| `Author` | Plugin author |
+| `Version` | Plugin version |
+| `Language` | Programming language (currently only `csharp`) |
+| `Website` | Plugin website or repository |
+| `ExecuteFileName` | DLL filename |
+| `IcoPathDark` | Dark theme icon path (relative to plugin folder) |
+| `IcoPathLight` | Light theme icon path (relative to plugin folder) |
+| `DynamicLoading` | (Optional) Whether to load dependencies in isolation |
+
+<Note>
+Make sure the `ID` in `plugin.json` matches the `PluginID` property in your `Main` class.
+</Note>
+
+## Plugin API Reference
+
+### Query Object
+
+The `Query` object contains information about the user's search:
+
+```csharp src/modules/launcher/Wox.Plugin/Query.cs
+public class Query
+{
+    // Raw query including action keyword
+    public string RawQuery { get; }
+    
+    // Search text (excluding action keyword)
+    public string Search { get; }
+    
+    // Query split into terms by whitespace
+    public ReadOnlyCollection<string> Terms { get; }
+    
+    // Action keyword used to trigger this plugin
+    public string ActionKeyword { get; }
+    
+    // First search term
+    public string FirstSearch { get; }
+    
+    // Second search term
+    public string SecondSearch { get; }
+    
+    // Third search term
+    public string ThirdSearch { get; }
+    
+    // All terms from second onwards
+    public string SecondToEndSearch { get; }
+}
+```
+
+### Result Object
+
+The `Result` object represents a single result item:
+
+```csharp src/modules/launcher/Wox.Plugin/Result.cs
+public class Result
+{
+    // Title displayed in result list
+    public string Title { get; set; }
+    
+    // Subtitle with additional information
+    public string SubTitle { get; set; }
+    
+    // Icon path (supports PNG, JPG, or font glyph)
+    public string IcoPath { get; set; }
+    
+    // Glyph character (e.g., "\xE8A5")
+    public string Glyph { get; set; }
+    
+    // Font family for glyph
+    public string FontFamily { get; set; }
+    
+    // Score for result ordering (higher = higher in list)
+    public int Score { get; set; }
+    
+    // Action to perform when result is selected
+    // Return true to close PowerToys Run, false to keep it open
+    public Func<ActionContext, bool> Action { get; set; }
+    
+    // Additional context data
+    public object ContextData { get; set; }
+    
+    // Text to display in search box when this result is selected
+    public string QueryTextDisplay { get; set; }
+    
+    // Tooltip data
+    public ToolTipData ToolTipData { get; set; }
+    
+    // Highlighted character positions in title
+    public IList<int> TitleHighlightData { get; set; }
+    
+    // Highlighted character positions in subtitle
+    public IList<int> SubTitleHighlightData { get; set; }
+}
+```
+
+### PluginInitContext
+
+Provided during plugin initialization:
+
+```csharp src/modules/launcher/Wox.Plugin/PluginInitContext.cs
+public class PluginInitContext
+{
+    // Plugin metadata from plugin.json
+    public PluginMetadata CurrentPluginMetadata { get; }
+    
+    // Public APIs for plugin to use
+    public IPublicAPI API { get; set; }
+}
+```
+
+### IPublicAPI Interface
+
+Provides access to PowerToys Run functionality:
+
+```csharp src/modules/launcher/Wox.Plugin/IPublicAPI.cs
+public interface IPublicAPI
+{
+    // Change the query text
+    void ChangeQuery(string query, bool requery = false);
+    
+    // Remove a result from history
+    void RemoveUserSelectedItem(Result result);
+    
+    // Get current theme
+    Theme GetCurrentTheme();
+    
+    // Theme changed event
+    event ThemeChangedHandler ThemeChanged;
+    
+    // Show a message box
+    void ShowMsg(string title, string subTitle = "", string iconPath = "");
+    
+    // Show toast notification
+    void ShowNotification(string text, string secondaryText = null);
+    
+    // Get all loaded plugins
+    List<PluginPair> GetAllPlugins();
+}
+```
+
+## Real-World Example: Unit Converter Plugin
+
+Here's a simplified version of the actual Unit Converter plugin from PowerToys:
+
+```csharp src/modules/launcher/Plugins/Community.PowerToys.Run.Plugin.UnitConverter/Main.cs
+namespace Community.PowerToys.Run.Plugin.UnitConverter
+{
+    public class Main : IPlugin, IPluginI18n, IContextMenu, IDisposable
+    {
+        public string Name => "Unit Converter";
+        public string Description => "Convert between different units";
+        public static string PluginID => "aa0ee9daff654fb7be452c2d77c471b9";
+
+        private PluginInitContext _context;
+        private static string _icon_path;
+
+        public void Init(PluginInitContext context)
+        {
+            _context = context;
+            _context.API.ThemeChanged += OnThemeChanged;
+            UpdateIconPath(_context.API.GetCurrentTheme());
+        }
+
+        public List<Result> Query(Query query)
+        {
+            // Parse the conversion request
+            ConvertModel convertModel = InputInterpreter.Parse(query);
+            if (convertModel == null)
+            {
+                return new List<Result>();
+            }
+
+            // Convert and return results
+            return UnitHandler.Convert(convertModel)
+                .Select(x => GetResult(x))
+                .ToList();
+        }
+
+        private Result GetResult(UnitConversionResult result)
+        {
+            return new Result
+            {
+                ContextData = result,
+                Title = result.ToString(),
+                IcoPath = _icon_path,
+                Score = 300,
+                SubTitle = $"Copy {result.QuantityInfo.Name} to clipboard",
+                Action = context =>
+                {
+                    Clipboard.SetText(result.ConvertedValue.ToString());
+                    return true;
+                },
+            };
+        }
+
+        public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
+        {
+            // Add right-click context menu option
+            return new List<ContextMenuResult>
+            {
+                new ContextMenuResult
+                {
+                    Title = "Copy",
+                    Glyph = "\xE8C8",
+                    FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+                    AcceleratorKey = Key.Enter,
+                    Action = _ =>
+                    {
+                        var result = selectedResult.ContextData as UnitConversionResult;
+                        Clipboard.SetText(result.ConvertedValue.ToString());
+                        return true;
+                    },
+                }
+            };
+        }
+
+        // ... theme handling and cleanup
+    }
+}
+```
+
+**Key features demonstrated**:
+- Custom query parsing with `InputInterpreter`
+- Business logic in separate `UnitHandler` class
+- Context menu with copy action
+- Theme-aware icons
+- Proper disposal pattern
+
+## Adding Context Menus
+
+Implement `IContextMenu` to add right-click actions:
+
+```csharp
+public interface IContextMenu
+{
+    List<ContextMenuResult> LoadContextMenus(Result selectedResult);
+}
+```
+
+Example context menu implementation:
+
+```csharp
+public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
+{
+    return new List<ContextMenuResult>
+    {
+        new ContextMenuResult
+        {
+            PluginName = Name,
+            Title = "Open in Browser",
+            Glyph = "\xE774", // Browser icon from Segoe MDL2 Assets
+            FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+            AcceleratorKey = Key.Enter,
+            AcceleratorModifiers = ModifierKeys.Control,
+            Action = context =>
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = selectedResult.ContextData as string,
+                    UseShellExecute = true
+                });
+                return true;
+            }
+        },
+        new ContextMenuResult
+        {
+            PluginName = Name,
+            Title = "Copy URL",
+            Glyph = "\xE8C8", // Copy icon
+            FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+            AcceleratorKey = Key.C,
+            AcceleratorModifiers = ModifierKeys.Control,
+            Action = context =>
+            {
+                Clipboard.SetText(selectedResult.ContextData as string);
+                return true;
+            }
+        }
+    };
+}
+```
+
+## Testing Your Plugin
+
+### Local Testing
+
+1. **Build your plugin**:
+   ```bash
+   dotnet build
+   ```
+
+2. **Copy plugin files** to PowerToys plugins folder:
+   ```
+   %LOCALAPPDATA%\Microsoft\PowerToys\PowerToys Run\Plugins\{YourPluginName}\
+   ```
+
+3. **Required files**:
+   - `{YourPluginName}.dll`
+   - `plugin.json`
+   - Icon files (light and dark)
+   - Any dependencies
+
+4. **Restart PowerToys Run**:
+   - Open PowerToys settings
+   - Go to PowerToys Run
+   - Toggle it off and on
+
+### Unit Testing
+
+Create unit tests using MSTest:
+
+```csharp
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Wox.Plugin;
+
+namespace Community.PowerToys.Run.Plugin.Example.UnitTests
+{
+    [TestClass]
+    public class QueryTests
+    {
+        [TestMethod]
+        public void QueryReturnsResults()
+        {
+            // Arrange
+            var plugin = new Main();
+            var query = new Query("test search");
+
+            // Act
+            var results = plugin.Query(query);
+
+            // Assert
+            Assert.IsTrue(results.Count > 0);
+            Assert.AreEqual("You searched: test search", results[0].Title);
+        }
+    }
+}
+```
+
+## Plugin Checklist
+
+Before submitting your plugin, ensure:
+
+- [ ] Project follows naming pattern: `{Type}.PowerToys.Run.Plugin.{PluginName}`
+- [ ] Target framework is `net9.0-windows10.0.22621.0`
+- [ ] `plugin.json` file is present and valid
+- [ ] Plugin ID in code matches `plugin.json`
+- [ ] Both light and dark theme icons are included
+- [ ] Unit tests are written using MSTest
+- [ ] Plugin handles empty/invalid queries gracefully
+- [ ] Action returns `true` (close) or `false` (keep open) appropriately
+- [ ] Theme change events are handled
+- [ ] Resources are properly disposed (implement `IDisposable` if needed)
+
+## Distribution
+
+### Contributing to PowerToys
+
+To include your plugin in PowerToys:
+
+1. **Add plugin to installer** (`installer/PowerToysSetup/Product.wxs`)
+2. **Add to signed build pipeline** (`.pipelines/pipeline.user.windows.yml`)
+3. **Create unit tests**
+4. **Follow localization process**
+5. **Submit pull request**
+
+See the [Plugin Checklist](https://github.com/microsoft/PowerToys/blob/main/doc/devdocs/modules/launcher/new-plugin-checklist.md) for full details.
+
+### Independent Distribution
+
+You can distribute plugins independently:
+
+1. Build your plugin
+2. Package DLL, `plugin.json`, and icons
+3. Provide installation instructions for users
+4. Users copy files to: `%LOCALAPPDATA%\Microsoft\PowerToys\PowerToys Run\Plugins\{YourPluginName}\`
+
+<Warning>
+Plugins run with full user privileges. Only install plugins from trusted sources.
+</Warning>
+
+## Additional Resources
+
+- [PowerToys Run Plugin Checklist](https://github.com/microsoft/PowerToys/blob/main/doc/devdocs/modules/launcher/new-plugin-checklist.md)
+- [Example Plugins in Source](https://github.com/microsoft/PowerToys/tree/main/src/modules/launcher/Plugins)
+- [PowerToys Contributing Guide](https://github.com/microsoft/PowerToys/blob/main/CONTRIBUTING.md)
+- [Segoe MDL2 Assets Icon List](https://learn.microsoft.com/windows/apps/design/style/segoe-ui-symbol-font)

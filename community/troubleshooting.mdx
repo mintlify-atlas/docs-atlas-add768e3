@@ -1,0 +1,768 @@
+---
+title: Troubleshooting Guide
+description: Solutions for common PowerToys issues, errors, and problems
+---
+
+## Common Installation Issues
+
+### PowerToys won't install
+
+<AccordionGroup>
+  <Accordion title="Error: Windows version is not supported">
+    **Problem:** Installation fails with message about unsupported Windows version.
+    
+    **Solution:**
+    
+    1. **Check Windows version:**
+       - Press `Win+R`, type `winver`, press Enter
+       - Verify you have Windows 10 version 1803 or newer
+       - Windows 11 is fully supported
+    
+    2. **Update Windows:**
+       - Go to Settings > Windows Update
+       - Install all available updates
+       - Restart and try installing PowerToys again
+    
+    3. **Use older version:**
+       - If you can't update Windows, try an older PowerToys version
+       - Check [release history](https://github.com/microsoft/PowerToys/releases) for compatible versions
+    
+    <Note>
+    PowerToys 0.50.0 and newer require Windows 10 version 1903 or later for all features.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Error: .NET runtime missing or incorrect version">
+    **Problem:** Installation fails due to missing or wrong .NET version.
+    
+    **Solution:**
+    
+    1. **Install .NET Desktop Runtime:**
+       - Download from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/8.0)
+       - Choose ".NET Desktop Runtime 8.0" for your architecture
+       - Install and restart
+    
+    2. **Verify installation:**
+       ```powershell
+       dotnet --list-runtimes
+       ```
+       Look for "Microsoft.WindowsDesktop.App 8.0.x"
+    
+    3. **Use the bundled installer:**
+       - Download machine-wide installer from GitHub
+       - It includes .NET runtime prerequisites
+       - File name: `PowerToysSetup-[version]-x64.exe`
+  </Accordion>
+
+  <Accordion title="Error: Installation blocked by SmartScreen">
+    **Problem:** Windows SmartScreen prevents installation.
+    
+    **Solution:**
+    
+    1. **Verify file authenticity:**
+       - Only download from official sources:
+         - [GitHub Releases](https://aka.ms/installPowerToys)
+         - Microsoft Store
+         - WinGet
+    
+    2. **Bypass SmartScreen (if file is legitimate):**
+       - Click "More info" in SmartScreen dialog
+       - Click "Run anyway"
+    
+    3. **Check digital signature:**
+       - Right-click installer file
+       - Properties > Digital Signatures tab
+       - Verify "Microsoft Corporation" signature
+    
+    <Warning>
+    Only bypass SmartScreen for files downloaded from official Microsoft sources. Third-party downloads may be unsafe.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Error: Installer fails with error code">
+    **Common installer error codes and solutions:**
+    
+    **0x80070643 - Installation failed:**
+    - Close all running instances of PowerToys
+    - Restart Windows
+    - Try installation again
+    - If persists, uninstall completely and reinstall
+    
+    **0x80070005 - Access denied:**
+    - Right-click installer and "Run as administrator"
+    - Disable antivirus temporarily
+    - Check User Account Control (UAC) settings
+    
+    **0x80070666 - Another version installed:**
+    - Uninstall existing PowerToys first
+    - Use Windows Settings > Apps
+    - Restart and install fresh
+    
+    **0x80070070 - Insufficient disk space:**
+    - Free up at least 1GB of space
+    - Run Disk Cleanup
+    - Remove temporary files
+    
+    **Still failing?**
+    - Check Windows Event Viewer:
+      - Windows Logs > Application
+      - Look for errors around installation time
+    - Collect logs and [report issue](https://github.com/microsoft/PowerToys/issues)
+  </Accordion>
+</AccordionGroup>
+
+### PowerToys won't update
+
+<AccordionGroup>
+  <Accordion title="Auto-update not working">
+    **Problem:** PowerToys doesn't notify about new versions.
+    
+    **Solution:**
+    
+    1. **Check update settings:**
+       - Open PowerToys Settings > General
+       - Verify "Automatically download updates" is enabled
+       - Click "Check for updates" manually
+    
+    2. **Verify internet connection:**
+       - PowerToys needs internet to check for updates
+       - Check firewall rules allow PowerToys
+       - Proxy settings may block update checks
+    
+    3. **Manual update:**
+       - Download latest version from [GitHub](https://aka.ms/installPowerToys)
+       - Run installer (will upgrade existing installation)
+       - Or use: `winget upgrade Microsoft.PowerToys`
+    
+    4. **Reset update settings:**
+       - Close PowerToys completely
+       - Delete: `%LOCALAPPDATA%\Microsoft\PowerToys\Update\`
+       - Restart PowerToys
+  </Accordion>
+
+  <Accordion title="Update fails to install">
+    **Problem:** Update downloads but fails to install.
+    
+    **Solution:**
+    
+    1. **Close PowerToys completely:**
+       ```powershell
+       taskkill /f /im PowerToys.exe
+       taskkill /f /im PowerToys.Settings.exe
+       ```
+    
+    2. **Check for locked files:**
+       - Some utilities may still be running
+       - Restart Windows to ensure clean state
+    
+    3. **Manual installation:**
+       - Download installer directly
+       - Run with administrator rights
+       - Choose "Upgrade" when prompted
+    
+    4. **Clean install:**
+       - Backup settings folder:
+         ```
+         %LOCALAPPDATA%\Microsoft\PowerToys\Settings\
+         ```
+       - Uninstall PowerToys
+       - Restart computer
+       - Install latest version
+       - Restore settings
+  </Accordion>
+</AccordionGroup>
+
+## Startup and Performance Issues
+
+<AccordionGroup>
+  <Accordion title="PowerToys doesn't start automatically">
+    **Problem:** PowerToys not launching at Windows startup.
+    
+    **Diagnostic Steps:**
+    
+    1. **Check startup setting:**
+       - PowerToys Settings > General
+       - Enable "Run at startup"
+    
+    2. **Verify in Task Manager:**
+       - Press `Ctrl+Shift+Esc`
+       - Startup tab
+       - Find "PowerToys"
+       - Status should be "Enabled"
+       - If "Disabled", right-click and enable
+    
+    3. **Check Task Scheduler:**
+       - Open Task Scheduler
+       - Navigate to: Task Scheduler Library > Microsoft > Windows > PowerToys
+       - Verify task exists and is enabled
+    
+    4. **Registry check (advanced):**
+       - Press `Win+R`, type `regedit`
+       - Navigate to: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+       - Look for "PowerToys" entry
+       - Value should point to PowerToys.exe
+    
+    5. **Recreate startup entry:**
+       ```powershell
+       # Find PowerToys installation
+       $ptPath = Get-Command PowerToys.exe -ErrorAction SilentlyContinue
+       
+       # Add to startup (if found)
+       if ($ptPath) {
+           $shell = New-Object -ComObject WScript.Shell
+           $shortcut = $shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\PowerToys.lnk")
+           $shortcut.TargetPath = $ptPath.Source
+           $shortcut.Save()
+       }
+       ```
+  </Accordion>
+
+  <Accordion title="PowerToys crashes on startup">
+    **Problem:** PowerToys crashes immediately or shortly after starting.
+    
+    **Solutions:**
+    
+    1. **Check Event Viewer:**
+       - Press `Win+X`, select "Event Viewer"
+       - Windows Logs > Application
+       - Look for PowerToys errors
+       - Note error codes and messages
+    
+    2. **Safe mode start:**
+       - Hold `Shift` while starting PowerToys
+       - Disables all utilities temporarily
+       - If successful, enable utilities one-by-one
+       - Identifies problematic utility
+    
+    3. **Reset settings:**
+       ```powershell
+       # Backup current settings
+       Copy-Item "$env:LOCALAPPDATA\Microsoft\PowerToys" "$env:USERPROFILE\Desktop\PowerToys_Backup" -Recurse
+       
+       # Delete settings
+       Remove-Item "$env:LOCALAPPDATA\Microsoft\PowerToys\Settings" -Recurse -Force
+       
+       # Restart PowerToys
+       ```
+    
+    4. **Check for conflicts:**
+       - Temporarily disable antivirus
+       - Close other utility software
+       - Disable startup apps in Task Manager
+    
+    5. **Reinstall Visual C++ Redistributables:**
+       - Download from [Microsoft](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist)
+       - Install both x86 and x64 versions
+       - Restart computer
+    
+    6. **Clean reinstall:**
+       - Completely uninstall PowerToys
+       - Delete leftover folders:
+         ```powershell
+         Remove-Item "$env:LOCALAPPDATA\Microsoft\PowerToys" -Recurse -Force
+         Remove-Item "$env:PROGRAMFILES\PowerToys" -Recurse -Force
+         ```
+       - Restart Windows
+       - Install latest version
+  </Accordion>
+
+  <Accordion title="High CPU or memory usage">
+    **Problem:** PowerToys consuming excessive system resources.
+    
+    **Diagnostic:**
+    
+    1. **Identify culprit:**
+       - Open Task Manager
+       - Details tab
+       - Sort by CPU/Memory
+       - Find PowerToys-related processes:
+         - `PowerToys.exe` - Main runner
+         - `PowerToys.Settings.exe` - Settings UI
+         - `PowerToys.*.exe` - Individual utilities
+    
+    2. **Common causes:**
+       
+       **PowerToys Run indexing:**
+       - Initial indexing after install uses CPU
+       - Usually settles after 10-15 minutes
+       - Disable plugins you don't use
+       
+       **FancyZones editor:**
+       - Editor window uses resources when open
+       - Close editor when not configuring layouts
+       
+       **File Explorer add-ons:**
+       - Previewing large files consumes memory
+       - Disable preview for file types you don't need
+       
+       **Mouse utilities:**
+       - Mouse tracking can use CPU
+       - Adjust polling rate in settings
+    
+    3. **Optimization steps:**
+       - Disable unused utilities
+       - Reduce PowerToys Run plugins
+       - Lower animation quality in FancyZones
+       - Disable File Explorer thumbnails for some file types
+    
+    4. **Monitor performance:**
+       ```powershell
+       # Track PowerToys resource usage
+       Get-Process -Name *PowerToys* | Select-Object Name, CPU, WorkingSet | Format-Table
+       ```
+  </Accordion>
+
+  <Accordion title="Slow performance or lag">
+    **Problem:** PowerToys features respond slowly or cause system lag.
+    
+    **Solutions:**
+    
+    1. **Reduce enabled utilities:**
+       - Disable utilities you rarely use
+       - Each utility adds some overhead
+    
+    2. **Optimize specific utilities:**
+       
+       **PowerToys Run:**
+       - Settings > PowerToys Run > Plugins
+       - Disable unused plugins
+       - Reduce maximum results
+       
+       **FancyZones:**
+       - Disable "Show zones while dragging" animations
+       - Reduce zone highlight duration
+       
+       **Peek:**
+       - Disable preview for large video files
+       - Reduce preview cache size
+    
+    3. **System optimization:**
+       - Update graphics drivers
+       - Ensure Windows is updated
+       - Check for malware/viruses
+       - Free up disk space (especially on SSD)
+    
+    4. **Hardware considerations:**
+       - PowerToys runs well on most modern hardware
+       - Minimum 4GB RAM recommended
+       - SSD improves PowerToys Run performance
+       - Multi-core CPU helps with indexing
+  </Accordion>
+</AccordionGroup>
+
+## Utility-Specific Issues
+
+<AccordionGroup>
+  <Accordion title="PowerToys Run not responding to hotkey">
+    **Problem:** `Alt+Space` (or custom hotkey) doesn't activate PowerToys Run.
+    
+    **Solutions:**
+    
+    1. **Verify utility is enabled:**
+       - Settings > PowerToys Run
+       - Toggle should be ON
+    
+    2. **Check hotkey conflicts:**
+       - Settings > PowerToys Run
+       - Click "Open PowerToys Run" field
+       - Try different key combination
+       - Common conflicts: Spotlight (if using Mac keyboard), other launchers
+    
+    3. **Test PowerToys Run directly:**
+       - Open Settings
+       - Click "Open PowerToys Run" button
+       - If this works, it's a hotkey issue
+    
+    4. **Reset hotkey:**
+       - Clear current hotkey
+       - Click in field and press new combination
+       - Avoid system-reserved combinations
+    
+    5. **Check for global hotkey conflicts:**
+       ```powershell
+       # List programs using global hotkeys (requires admin)
+       Get-Process | Where-Object {$_.MainWindowTitle -ne ""} | Select-Object Name, MainWindowTitle
+       ```
+  </Accordion>
+
+  <Accordion title="FancyZones not snapping windows">
+    **Problem:** Windows don't snap to FancyZones layouts.
+    
+    **Solutions:**
+    
+    1. **Check basic settings:**
+       - Settings > FancyZones
+       - "Enable" toggle is ON
+       - "Hold Shift key to activate zones while dragging" is enabled
+    
+    2. **Verify layout is applied:**
+       - Launch FancyZones Editor (`Win+Shift+~`)
+       - Select your monitor
+       - Ensure a layout is applied (not "Blank")
+    
+    3. **Test snapping behavior:**
+       - Hold `Shift` key
+       - Drag a window slowly
+       - Zones should highlight
+       - Release mouse to snap
+    
+    4. **Common causes:**
+       
+       **Administrator windows:**
+       - Apps running as admin can't be snapped
+       - Run PowerToys as admin (Settings > General)
+       
+       **Excluded apps:**
+       - Settings > FancyZones > Excluded apps
+       - Remove apps you want to snap
+       
+       **Multi-monitor issues:**
+       - Each monitor needs its own layout
+       - DPI differences can cause problems
+       - Try recreating layouts
+    
+    5. **Reset FancyZones:**
+       ```powershell
+       # Backup and reset FancyZones settings
+       $fzPath = "$env:LOCALAPPDATA\Microsoft\PowerToys\FancyZones"
+       Rename-Item $fzPath "$fzPath.backup"
+       # Restart PowerToys
+       ```
+  </Accordion>
+
+  <Accordion title="Keyboard Manager remaps not working">
+    **Problem:** Key remaps or shortcuts not functioning.
+    
+    **Solutions:**
+    
+    1. **Verify remaps are active:**
+       - Settings > Keyboard Manager
+       - Check "Enable" toggle
+       - View "Remap a key" and "Remap a shortcut" lists
+    
+    2. **Test in different applications:**
+       - App-specific remaps only work in target app
+       - Global remaps work everywhere
+       - Try in Notepad to test
+    
+    3. **Check for conflicts:**
+       - Multiple remaps can conflict
+       - System shortcuts take precedence
+       - Try removing all remaps and adding one at a time
+    
+    4. **Administrative applications:**
+       - Run PowerToys as administrator:
+         - Settings > General
+         - Enable "Run as administrator"
+       - Required for remaps to work in admin apps
+    
+    5. **Keyboard layout issues:**
+       - Remaps are keyboard-layout-specific
+       - Switching layouts may affect remaps
+       - Create remaps for each layout
+    
+    6. **Reset Keyboard Manager:**
+       - Delete remaps and recreate
+       - Or reset settings:
+         ```powershell
+         Remove-Item "$env:LOCALAPPDATA\Microsoft\PowerToys\Keyboard Manager" -Recurse -Force
+         ```
+  </Accordion>
+
+  <Accordion title="PowerRename not appearing in context menu">
+    **Problem:** Right-click context menu doesn't show PowerRename.
+    
+    **Solutions:**
+    
+    1. **Enable in settings:**
+       - Settings > PowerRename
+       - Toggle should be ON
+       - Check "Show PowerRename in" options
+    
+    2. **Windows 11 context menu:**
+       - PowerRename appears in extended menu
+       - Right-click file(s)
+       - Click "Show more options"
+       - Or enable in main menu via settings
+    
+    3. **Restart File Explorer:**
+       ```powershell
+       taskkill /f /im explorer.exe
+       Start-Process explorer.exe
+       ```
+    
+    4. **Re-register shell extension:**
+       ```powershell
+       # Run PowerToys as admin first
+       # Close PowerToys
+       # Run this command
+       regsvr32 /u "$env:PROGRAMFILES\PowerToys\PowerRenameExt.dll"
+       regsvr32 "$env:PROGRAMFILES\PowerToys\PowerRenameExt.dll"
+       ```
+    
+    5. **Check Windows version:**
+       - Context menu handlers require Windows 10 1903+
+       - Update Windows if on older version
+    
+    6. **Group Policy restrictions:**
+       - Enterprise environments may block extensions
+       - Contact IT administrator
+       - Check: `gpedit.msc` > User Configuration > Administrative Templates
+  </Accordion>
+
+  <Accordion title="Color Picker not activating">
+    **Problem:** Color Picker hotkey not working.
+    
+    **Solutions:**
+    
+    1. **Check settings:**
+       - Settings > Color Picker
+       - Ensure "Enable Color Picker" is ON
+       - Note the activation shortcut (default: `Win+Shift+C`)
+    
+    2. **Test shortcut:**
+       - Press activation shortcut
+       - Cursor should change to crosshair
+       - Click anywhere to pick color
+    
+    3. **Hotkey conflicts:**
+       - Try different key combination
+       - Check if other apps use same shortcut
+       - Example conflicts: ShareX, Greenshot
+    
+    4. **Clipboard issues:**
+       - Color Picker copies to clipboard
+       - Test clipboard functionality
+       - Close clipboard managers temporarily
+    
+    5. **Multi-monitor:**
+       - Ensure works on all monitors
+       - Try on primary monitor first
+       - DPI differences can cause issues
+  </Accordion>
+
+  <Accordion title="File Explorer add-ons not working">
+    **Problem:** Preview pane or thumbnails not showing for supported file types.
+    
+    **Solutions:**
+    
+    1. **Enable preview handlers:**
+       - Settings > File Explorer
+       - Enable specific file types you want
+       - Toggle "Enable" for the utility
+    
+    2. **Enable Windows preview pane:**
+       - Open File Explorer
+       - View tab > Preview pane
+       - Should show on right side
+    
+    3. **File type associations:**
+       - Some file types may have default apps
+       - Right-click file > Open with > Choose another app
+       - Don't change default, just test
+    
+    4. **Missing dependencies:**
+       
+       **For Markdown preview:**
+       - Requires WebView2 runtime
+       - Usually installed with PowerToys
+       - Download from [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/)
+       
+       **For PDF preview:**
+       - Uses Windows built-in PDF renderer
+       - Ensure Windows is updated
+    
+    5. **Restart File Explorer:**
+       ```powershell
+       Stop-Process -Name explorer -Force
+       Start-Process explorer
+       ```
+    
+    6. **Reinstall preview handlers:**
+       - Uninstall PowerToys
+       - Delete: `%LOCALAPPDATA%\Microsoft\PowerToys`
+       - Reinstall PowerToys
+       - Enable File Explorer add-ons
+  </Accordion>
+</AccordionGroup>
+
+## Windows Version Compatibility
+
+### Minimum Requirements
+
+<Tabs>
+  <Tab title="Windows 11">
+    **Fully Supported**
+    
+    - All PowerToys features work
+    - Best performance and compatibility
+    - Native support for new context menus
+    - Recommended for optimal experience
+    
+    **Windows 11-Specific Features:**
+    - Snap Layouts integration with FancyZones
+    - Modern File Explorer integration
+    - Enhanced DPI scaling support
+  </Tab>
+  
+  <Tab title="Windows 10">
+    **Version Requirements:**
+    
+    - **Minimum**: Windows 10 version 1803 (April 2018 Update)
+    - **Recommended**: Windows 10 version 1903 (May 2019 Update) or newer
+    
+    **Feature Availability:**
+    
+    **Version 1803-1809:**
+    - Most utilities work
+    - Some File Explorer features limited
+    - Context menu handlers may be unavailable
+    
+    **Version 1903+:**
+    - All features supported
+    - Full File Explorer integration
+    - Context menu handlers functional
+    
+    **Version 21H2+ (latest):**
+    - Best Windows 10 experience
+    - Full feature parity
+    - Recommended to update
+  </Tab>
+  
+  <Tab title="Older Windows">
+    **Not Supported:**
+    
+    - Windows 7
+    - Windows 8/8.1
+    - Windows 10 versions older than 1803
+    
+    **Why Not Supported:**
+    - Missing required Windows APIs
+    - .NET 8 not compatible
+    - WinUI framework unavailable
+    - Security considerations
+    
+    **Alternatives:**
+    - Update to Windows 10 1903+ or Windows 11
+    - Use older PowerToys versions (limited support)
+    - Seek alternative utilities for older Windows
+  </Tab>
+</Tabs>
+
+### Version-Specific Issues
+
+<AccordionGroup>
+  <Accordion title="Windows 10 1803-1809 limitations">
+    **Known Limitations:**
+    
+    1. **File Explorer Add-ons:**
+       - Preview handlers may not register
+       - Thumbnails limited
+       - Recommendation: Update to 1903+
+    
+    2. **Context Menu Handlers:**
+       - PowerRename may not appear
+       - Image Resizer context menu unreliable
+       - Workaround: Use utilities from Settings UI
+    
+    3. **Performance:**
+       - Slower PowerToys Run indexing
+       - FancyZones animations may stutter
+       - Consider disabling animations
+  </Accordion>
+
+  <Accordion title="Windows Insider builds">
+    **Beta/Preview Builds:**
+    
+    PowerToys generally works on Insider builds, but:
+    
+    - **Dev Channel**: May break unexpectedly
+    - **Beta Channel**: Usually stable
+    - **Release Preview**: Very stable
+    
+    **If Issues Occur:**
+    1. Report on [GitHub Issues](https://github.com/microsoft/PowerToys/issues)
+    2. Include Windows build number
+    3. Provide logs and error details
+    4. Check if others report same issue
+    
+    **Workarounds:**
+    - Disable problematic utility
+    - Wait for PowerToys update
+    - Roll back to stable Windows build
+  </Accordion>
+</AccordionGroup>
+
+## Getting Additional Help
+
+### Collecting Diagnostic Information
+
+<Steps>
+  <Step title="Generate Bug Report">
+    1. Right-click PowerToys tray icon
+    2. Select "Report bug"
+    3. Reproduce issue if possible
+    4. Click "Submit" to create report ZIP
+  </Step>
+  
+  <Step title="Gather System Information">
+    ```powershell
+    # System info
+    systeminfo | Select-String "OS Name","OS Version","System Type"
+    
+    # PowerToys version
+    Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | 
+      Where-Object {$_.DisplayName -like "*PowerToys*"} | 
+      Select-Object DisplayName, DisplayVersion
+    
+    # .NET version
+    dotnet --info
+    ```
+  </Step>
+  
+  <Step title="Check Event Logs">
+    1. Press `Win+X` and select "Event Viewer"
+    2. Navigate to Windows Logs > Application
+    3. Filter by Source: "PowerToys"
+    4. Note any errors or warnings
+  </Step>
+</Steps>
+
+### Reporting Issues
+
+<Card title="Report on GitHub" icon="github" href="https://github.com/microsoft/PowerToys/issues/new/choose">
+  **Before Reporting:**
+  1. Search existing issues
+  2. Verify on latest PowerToys version
+  3. Collect diagnostic information
+  4. Include clear reproduction steps
+  
+  **Information to Include:**
+  - PowerToys version
+  - Windows version and build
+  - Installation method
+  - Steps to reproduce
+  - Expected vs actual behavior
+  - Log files from bug report tool
+</Card>
+
+### Community Resources
+
+<CardGroup cols={2}>
+  <Card title="FAQ" icon="question-circle" href="/community/faq">
+    Answers to frequently asked questions
+  </Card>
+  <Card title="Contributing" icon="code" href="/community/contributing">
+    Help improve PowerToys
+  </Card>
+  <Card title="Documentation" icon="book" href="https://aka.ms/powertoys-docs">
+    Official Microsoft Learn docs
+  </Card>
+  <Card title="Discussions" icon="comments" href="https://github.com/microsoft/PowerToys/discussions">
+    Community forum
+  </Card>
+</CardGroup>
+
+<Note>
+For issues not covered in this guide, please search [GitHub Issues](https://github.com/microsoft/PowerToys/issues) or create a new issue with detailed information about your problem.
+</Note>

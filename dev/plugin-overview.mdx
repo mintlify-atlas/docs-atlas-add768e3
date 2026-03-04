@@ -1,0 +1,173 @@
+---
+title: Plugin Development Overview
+description: Overview of extensibility in Microsoft PowerToys through plugins and extensions
+---
+
+# Plugin Development Overview
+
+Microsoft PowerToys provides two primary extensibility models that allow developers to extend the functionality of PowerToys with custom plugins and extensions.
+
+## Extensibility Types
+
+PowerToys supports two types of extensibility:
+
+<CardGroup cols={2}>
+  <Card title="PowerToys Run Plugins" icon="bolt" href="/dev/powertoys-run-plugins">
+    Extend PowerToys Run launcher with custom search providers and actions
+  </Card>
+  <Card title="Command Palette Extensions" icon="terminal" href="/dev/command-palette-extensions">
+    Create extensions for the next-generation Command Palette (CmdPal)
+  </Card>
+</CardGroup>
+
+## PowerToys Run Plugins
+
+PowerToys Run is a quick launcher for power users that includes features like:
+- Application search
+- File and folder search
+- Shell command execution
+- Calculator
+- Unit converter
+- And more through plugins
+
+**Plugin Model**: C#-based plugins implementing the `IPlugin` interface from the `Wox.Plugin` namespace.
+
+**Key Features**:
+- Action keywords for direct activation
+- Global plugins that respond to all queries
+- Context menus for additional actions
+- Theme support (light/dark)
+- Localization support
+
+## Command Palette Extensions
+
+Command Palette (CmdPal) is the next iteration of PowerToys Run, designed with extensibility at its core.
+
+**Extension Model**: WinRT-based extensions implementing the `IExtension` interface, language-agnostic (any language supporting WinRT).
+
+**Key Features**:
+- Command providers with list and content pages
+- Rich UI elements (forms, markdown, trees)
+- Fallback handlers for custom query processing
+- Settings pages
+- Extension host APIs for status and logging
+
+<Note>
+The Command Palette is currently in preview. The API may introduce breaking changes before reaching v1.0.0.
+</Note>
+
+## Development Workflow
+
+### PowerToys Run Plugin Workflow
+
+1. **Create Plugin Project**
+   - Create a new C# class library targeting `net9.0-windows10.0.22621.0`
+   - Follow naming pattern: `Microsoft.PowerToys.Run.Plugin.{PluginName}` or `Community.PowerToys.Run.Plugin.{PluginName}`
+
+2. **Implement Plugin Interface**
+   - Implement `IPlugin` interface
+   - Add `plugin.json` metadata file
+   - Create light and dark theme icons
+
+3. **Build and Test**
+   - Build the plugin DLL
+   - Copy to PowerToys plugins folder
+   - Test with PowerToys Run
+
+4. **Package**
+   - Add to installer configuration
+   - Include in signed build pipeline
+   - Add localization support
+
+### Command Palette Extension Workflow
+
+1. **Create Extension**
+   - Use the "Create extension" command in Command Palette itself
+   - Or manually create a WinRT component project
+
+2. **Implement Extension Interface**
+   - Implement `IExtension` interface
+   - Create a `ICommandProvider`
+   - Define pages and commands
+
+3. **Build and Deploy**
+   - Build the extension
+   - Deploy to Command Palette extensions folder
+   - Extension is automatically discovered
+
+## Plugin vs Extension: When to Use Which
+
+| Feature | PowerToys Run Plugin | Command Palette Extension |
+|---------|---------------------|---------------------------|
+| **Language Support** | C# only | Any WinRT-compatible language |
+| **UI Complexity** | Simple list results | Rich pages, forms, content |
+| **Maturity** | Stable, production-ready | Preview, API may change |
+| **Performance** | Fast, lightweight | More features, slightly heavier |
+| **Use Case** | Quick search and actions | Complex workflows and forms |
+
+## Development Environment Setup
+
+### Prerequisites
+
+- Visual Studio 2022 17.4+ or Visual Studio 2026
+- Windows 10 1803+ (April 2018 Update or newer)
+- .NET 9 SDK
+- PowerToys installed (for testing)
+
+### Clone PowerToys Repository
+
+```bash
+git clone https://github.com/microsoft/PowerToys.git
+cd PowerToys
+git submodule update --init --recursive
+```
+
+### Build PowerToys
+
+```bash
+tools\build\build-essentials.cmd
+tools\build\build.cmd
+```
+
+See the [Building PowerToys](/dev/building) guide for detailed build instructions.
+
+## Plugin Distribution
+
+### Official Plugins
+
+Official plugins are included in the PowerToys repository and distributed with PowerToys:
+- Must pass code review
+- Must include unit tests
+- Must follow PowerToys coding guidelines
+- Must be localized
+
+### Community Plugins
+
+Community plugins can be:
+- Submitted as pull requests to the PowerToys repository
+- Distributed independently (users manually install)
+- Shared through community channels
+
+<Warning>
+Plugins have full access to the user's system. Only install plugins from trusted sources.
+</Warning>
+
+## Getting Started
+
+Choose your path:
+
+<CardGroup cols={2}>
+  <Card title="Create a PowerToys Run Plugin" icon="code" href="/dev/powertoys-run-plugins">
+    Learn how to create a plugin for PowerToys Run with the IPlugin interface
+  </Card>
+  <Card title="Create a Command Palette Extension" icon="puzzle-piece" href="/dev/command-palette-extensions">
+    Build a rich extension for the next-generation Command Palette
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [PowerToys GitHub Repository](https://github.com/microsoft/PowerToys)
+- [PowerToys Run Overview](https://aka.ms/PowerToysOverview_PowerToysRun)
+- [Command Palette Documentation](https://learn.microsoft.com/windows/powertoys/command-palette/extensibility-overview)
+- [Contributing Guidelines](https://github.com/microsoft/PowerToys/blob/main/CONTRIBUTING.md)

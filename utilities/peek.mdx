@@ -1,0 +1,332 @@
+---
+title: Peek
+description: A file previewer utility that lets you preview files instantly with a single keystroke without opening them in full applications.
+---
+
+Peek is a quick file previewer that lets you view file contents instantly without launching full applications. Press the activation shortcut while selecting files in File Explorer to get an immediate preview.
+
+## Activation
+
+<Steps>
+  <Step title="Select Files">
+    In File Explorer, select one or more files you want to preview.
+  </Step>
+  <Step title="Activate Peek">
+    Press `Ctrl + Space` to open the Peek preview window.
+  </Step>
+  <Step title="Close Preview">
+    Press `Esc` or `Ctrl + Space` again to close.
+  </Step>
+</Steps>
+
+<Note>
+  Peek works exclusively within File Explorer. The activation shortcut has no effect in other applications.
+</Note>
+
+## Supported File Types
+
+Peek uses a previewer architecture to support different file formats. Each previewer implements the `IPreviewer` interface from `/src/modules/peek/Peek.FilePreviewer/Previewers/Interfaces/IPreviewer.cs`.
+
+### Image Files
+
+Preview images with support for:
+- Common formats: PNG, JPG, GIF, BMP, TIFF, ICO
+- Advanced formats: WebP, SVG
+- RAW camera formats (through Windows codecs)
+- Animated GIFs
+
+**Features:**
+- Zoom and pan support
+- Display image dimensions and file size
+- EXIF metadata display (for supported formats)
+
+### Video Files
+
+Preview video files using Windows Media Foundation:
+- MP4, AVI, MKV, MOV, WMV
+- MPEG, FLV, WebM
+- Display duration, resolution, codec information
+- Basic playback controls
+
+### Audio Files
+
+Preview audio files with:
+- MP3, WAV, FLAC, AAC, OGG, WMA
+- Display duration, bitrate, sample rate
+- Waveform visualization
+- Playback controls
+
+Implementation: `/src/modules/peek/Peek.FilePreviewer/Controls/AudioControl.xaml.cs`
+
+### Archive Files
+
+Browse archive contents without extraction:
+- ZIP, RAR, 7Z, TAR, GZ
+- Display folder structure
+- Show file count and sizes
+- Preview individual files within archives
+
+Implementation: `/src/modules/peek/Peek.FilePreviewer/Controls/ArchiveControl.xaml.cs`
+
+### Code & Text Files
+
+Syntax-highlighted preview for:
+- Programming languages: C#, C++, JavaScript, Python, Java, Go, Rust, etc.
+- Markup: HTML, XML, JSON, YAML, TOML
+- Scripts: PowerShell, Bash, Batch
+- Configuration files
+- Plain text
+
+### PDF Files
+
+Preview PDF documents with:
+- Page navigation
+- Zoom controls
+- Multi-page support
+- Text selection
+
+### Office Documents
+
+Preview Microsoft Office files:
+- Word (.docx, .doc)
+- Excel (.xlsx, .xls)
+- PowerPoint (.pptx, .ppt)
+
+Uses Windows Shell preview handlers.
+
+### Web Files
+
+Preview web content:
+- HTML files with rendering
+- CSS files with syntax highlighting
+- JavaScript files
+
+Implementation: `/src/modules/peek/Peek.FilePreviewer/Controls/BrowserControl.xaml.cs`
+
+### Special Folders & Drives
+
+Preview drives and special folders with:
+- Disk space information
+- Drive type and file system
+- Folder metadata
+
+Implementation: `/src/modules/peek/Peek.FilePreviewer/Controls/DriveControl.xaml.cs`
+
+## Features
+
+### Multi-File Preview
+
+<Tabs>
+  <Tab title="Single File">
+    Select one file and press `Ctrl + Space` to preview it in a centered window.
+  </Tab>
+  <Tab title="Multiple Files">
+    Select multiple files in File Explorer:
+    - Use arrow keys to navigate between selected files
+    - File counter shows current position (e.g., "1 of 5")
+    - Preview updates instantly when switching files
+  </Tab>
+</Tabs>
+
+### Preview States
+
+Peek implements state management through the `PreviewState` enum:
+
+<CodeGroup>
+```csharp States
+public enum PreviewState
+{
+    Uninitialized,  // Preview not yet started
+    Loading,        // Loading file content
+    Loaded,         // Successfully loaded
+    Error,          // Failed to preview
+}
+```
+</CodeGroup>
+
+From `/src/modules/peek/Peek.FilePreviewer/Previewers/Interfaces/IPreviewer.cs:24-30`
+
+### Window Features
+
+<Accordion title="Title Bar">
+  Custom title bar with:
+  - File name display
+  - File path
+  - Close button
+  - Drag to move window
+  
+  Implementation: `/src/modules/peek/Peek.UI/Views/TitleBar.xaml`
+</Accordion>
+
+<Accordion title="Unsupported Files">
+  When a file type isn't supported, Peek displays:
+  - File icon
+  - File name and path
+  - File size
+  - Modification date
+  - Option to open in default application
+  
+  Implementation: `/src/modules/peek/Peek.UI/Views/UnsupportedFile.xaml`
+</Accordion>
+
+### File Actions
+
+<Steps>
+  <Step title="Copy File Path">
+    Right-click or use context menu to copy the file path to clipboard.
+  </Step>
+  <Step title="Open in Default App">
+    Click "Open" button to launch the file in its default application.
+  </Step>
+  <Step title="Open File Location">
+    Quickly navigate to the file's containing folder.
+  </Step>
+</Steps>
+
+## Configuration
+
+### Activation Shortcut
+
+Customize the activation shortcut in PowerToys Settings:
+1. Open PowerToys Settings
+2. Navigate to Peek
+3. Change "Activation shortcut" (default: `Ctrl + Space`)
+
+<Warning>
+  Avoid conflicts with other applications. Common alternatives: `Ctrl + Shift + Space`, `Alt + P`
+</Warning>
+
+### Preview Settings
+
+<AccordionGroup>
+  <Accordion title="Window Size">
+    Configure default preview window dimensions and position.
+  </Accordion>
+  
+  <Accordion title="Previewer Options">
+    Enable or disable specific previewers:
+    - Disable resource-intensive previewers (video, large images)
+    - Control which file types trigger preview
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Max file size for preview
+    - Loading timeout
+    - Memory limits for large files
+  </Accordion>
+</AccordionGroup>
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Quick Inspection" icon="magnifying-glass">
+    Verify file contents without opening apps - perfect for checking downloads, screenshots, or documents.
+  </Card>
+  
+  <Card title="Archive Browsing" icon="file-zipper">
+    Browse ZIP/archive contents without extraction. Navigate folder structures and preview files inside.
+  </Card>
+  
+  <Card title="Code Review" icon="code">
+    Quickly scan source code files with syntax highlighting. Review changes across multiple files.
+  </Card>
+  
+  <Card title="Media Management" icon="photo-film">
+    Preview images, videos, and audio files instantly while organizing media libraries.
+  </Card>
+</CardGroup>
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Space` | Open/Close Peek (default) |
+| `Esc` | Close preview window |
+| `←` `→` | Navigate between multiple selected files |
+| `Ctrl + C` | Copy file path |
+| `Ctrl + O` | Open in default application |
+| `Ctrl + W` | Close window |
+
+## Advanced Features
+
+### Shell Preview Handler Integration
+
+Peek integrates with Windows Shell Preview Handlers for file types without native previewers:
+
+```
+Implementation: /src/modules/peek/Peek.FilePreviewer/Controls/ShellPreviewHandlerControl.xaml.cs
+```
+
+This enables preview support for:
+- Third-party file formats with installed preview handlers
+- Custom file types
+- Fallback for unsupported formats
+
+### WinUI 3 Architecture
+
+Peek is built on WinUI 3 (Windows App SDK) for modern UI:
+
+<CodeGroup>
+```xml Project Configuration
+<PropertyGroup>
+  <UseWinUI>true</UseWinUI>
+  <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  <OutputType>WinExe</OutputType>
+</PropertyGroup>
+```
+</CodeGroup>
+
+From `/src/modules/peek/Peek.UI/Peek.UI.csproj:15, 22`
+
+### Preview Size Calculation
+
+Each previewer implements `GetPreviewSizeAsync()` to calculate optimal window dimensions:
+
+```csharp
+Task<PreviewSize> GetPreviewSizeAsync(CancellationToken cancellationToken);
+```
+
+This ensures previews are sized appropriately for content type and screen resolution.
+
+## Performance Considerations
+
+<Tip>
+  For optimal performance with large files:
+  
+  1. Set maximum file size limits in settings
+  2. Disable video preview for very large video files
+  3. Use timeout settings to prevent hanging on slow drives
+  4. Peek processes previews asynchronously to avoid blocking File Explorer
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Preview Not Showing">
+    - Ensure Peek is enabled in PowerToys Settings
+    - Verify file type is supported
+    - Check activation shortcut isn't conflicting with other apps
+    - Restart File Explorer if Peek stops responding
+  </Accordion>
+  
+  <Accordion title="Slow Preview Loading">
+    - Large files may take time to load
+    - Check if file is on network drive or slow storage
+    - Reduce maximum file size in settings
+  </Accordion>
+  
+  <Accordion title="Some Files Show 'Unsupported'">
+    - File type may not have a built-in previewer
+    - Install Windows codec packs for additional format support
+    - Some proprietary formats require native applications
+  </Accordion>
+</AccordionGroup>
+
+## Source Code
+
+Location: `/src/modules/peek/`
+
+- Main UI: `Peek.UI/`
+- File previewers: `Peek.FilePreviewer/`
+- Common utilities: `Peek.Common/`
+- Project file: `Peek.UI/Peek.UI.csproj`

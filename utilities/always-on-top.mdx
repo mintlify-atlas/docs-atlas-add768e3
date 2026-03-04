@@ -1,0 +1,396 @@
+---
+title: Always On Top
+description: Pin any window to stay on top of all other windows with visual borders and transparency control
+---
+
+## Overview
+
+Always On Top allows you to pin windows so they remain visible above all other windows. Pinned windows display an optional colored border and support transparency adjustments, making it easy to keep important information visible while working.
+
+<Note>
+Always On Top uses the Windows `WS_EX_TOPMOST` extended window style to keep windows above others.
+</Note>
+
+## Activation
+
+<Steps>
+  <Step title="Enable the Utility">
+    Open PowerToys Settings and enable **Always On Top** in the utilities list
+  </Step>
+  
+  <Step title="Pin a Window">
+    Activate the foreground window using the configured hotkey (default: `Win+Ctrl+T`)
+  </Step>
+  
+  <Step title="Verify Visual Border">
+    A colored border appears around pinned windows (if enabled in settings)
+  </Step>
+</Steps>
+
+## Key Features
+
+### Window Pinning
+
+Pin any window to keep it always on top:
+
+```cpp
+// Core pinning implementation (AlwaysOnTop.cpp:605)
+bool AlwaysOnTop::PinTopmostWindow(HWND window) const noexcept
+{
+    if (!SetProp(window, WINDOW_IS_PINNED_PROP, reinterpret_cast<HANDLE>(1)))
+    {
+        Logger::error(L"SetProp failed");
+    }
+    
+    auto res = SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0, 
+                           SWP_NOMOVE | SWP_NOSIZE);
+    return res;
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Pin/Unpin" icon="thumbtack">
+    Toggle window topmost state with hotkey
+    
+    **Default:** `Win+Ctrl+T`
+  </Card>
+  
+  <Card title="Visual Border" icon="border-all">
+    Optional colored frame around pinned windows
+    
+    Configurable thickness and color
+  </Card>
+  
+  <Card title="Transparency Control" icon="droplet">
+    Adjust window opacity with keyboard shortcuts
+    
+    **Increase:** `Win+Ctrl++`
+    
+    **Decrease:** `Win+Ctrl+-`
+  </Card>
+  
+  <Card title="System Menu Integration" icon="bars">
+    Add "Always on top" option to window system menus
+    
+    Right-click title bar to access
+  </Card>
+</CardGroup>
+
+### Transparency Adjustment
+
+Fine-tune window opacity for pinned windows:
+
+```cpp
+// Transparency stepping (AlwaysOnTop.cpp:856)
+void AlwaysOnTop::StepWindowTransparency(HWND window, int delta)
+{
+    int currentTransparency = maxTransparencyPercentage;
+    
+    // Get current alpha value
+    if (exStyle & WS_EX_LAYERED)
+    {
+        GetLayeredWindowAttributes(window, nullptr, &alpha, nullptr);
+        currentTransparency = (alpha * 100) / 255;
+    }
+    
+    // Step by configured amount (default: 10%)
+    int newTransparency = clamp(currentTransparency + delta, 
+                                minTransparencyPercentage, 
+                                maxTransparencyPercentage);
+    
+    ApplyWindowAlpha(window, newTransparency);
+}
+```
+
+Transparency range: **10% to 100%** (configurable step size)
+
+### Visual Border Options
+
+Customize the appearance of pinned window borders:
+
+- **Border Thickness**: Adjustable pixel width
+- **Border Color**: Choose from predefined colors or custom RGB
+- **Border Style**: Solid outline around window perimeter
+- **Virtual Desktop Aware**: Borders only appear on current desktop
+
+### System Menu Integration
+
+When enabled, Always On Top adds a "Pin window" option to every window's system menu:
+
+1. Right-click on any window's title bar
+2. Select "Always on top" from the menu
+3. Window is pinned with checkmark indicator
+
+```cpp
+// System menu integration (AlwaysOnTop.cpp:516)
+void AlwaysOnTop::UpdateSystemMenuItem(HWND window) const noexcept
+{
+    const auto systemMenu = GetSystemMenu(window, false);
+    
+    MENUITEMINFOW menuItemInfo{};
+    menuItemInfo.cbSize = sizeof(menuItemInfo);
+    menuItemInfo.fMask = MIIM_ID | MIIM_STATE | MIIM_STRING;
+    menuItemInfo.wID = SYSTEM_MENU_TOGGLE_ALWAYS_ON_TOP_COMMAND;
+    menuItemInfo.fState = IsPinned(window) ? MFS_CHECKED : MFS_UNCHECKED;
+    
+    InsertMenuItemW(systemMenu, SC_CLOSE, FALSE, &menuItemInfo);
+}
+```
+
+## Configuration
+
+### Settings Location
+
+Settings are stored in:
+```
+%LOCALAPPDATA%\Microsoft\PowerToys\AlwaysOnTop\settings.json
+```
+
+### Available Options
+
+<ParamField path="hotkey" type="object" required>
+  Keyboard shortcut to pin/unpin windows
+  
+  **Default:** `Win+Ctrl+T`
+  
+  ```json
+  {
+    "win": true,
+    "ctrl": true,
+    "shift": false,
+    "code": 84
+  }
+  ```
+</ParamField>
+
+<ParamField path="enableFrame" type="boolean" default="true">
+  Show colored border around pinned windows
+</ParamField>
+
+<ParamField path="frameThickness" type="number" default="5">
+  Border width in pixels
+</ParamField>
+
+<ParamField path="frameColor" type="string" default="#0078D7">
+  Border color in hex format
+</ParamField>
+
+<ParamField path="enableSound" type="boolean" default="true">
+  Play sound when pinning/unpinning windows
+</ParamField>
+
+<ParamField path="showInSystemMenu" type="boolean" default="true">
+  Add toggle option to window system menus
+</ParamField>
+
+<ParamField path="blockInGameMode" type="boolean" default="false">
+  Disable Always On Top when Windows Game Mode is active
+</ParamField>
+
+<ParamField path="excludedApps" type="array" default="[]">
+  List of applications to exclude from Always On Top
+  
+  ```json
+  [
+    "notepad.exe",
+    "calc.exe"
+  ]
+  ```
+</ParamField>
+
+### Excluding Applications
+
+Prevent specific applications from being pinned:
+
+1. Open PowerToys Settings
+2. Navigate to Always On Top
+3. Scroll to "Excluded apps"
+4. Click "Add application"
+5. Select the executable or enter process name
+
+## Use Cases
+
+### Video Conferencing
+
+<Steps>
+  <Step title="Pin Meeting Controls">
+    Keep Zoom/Teams control panel visible while presenting
+  </Step>
+  
+  <Step title="Adjust Transparency">
+    Make controls semi-transparent to see content behind them
+    
+    Press `Win+Ctrl+-` to decrease opacity
+  </Step>
+  
+  <Step title="Position Window">
+    Move control panel to screen corner for minimal obstruction
+  </Step>
+</Steps>
+
+### Reference Documentation
+
+Keep documentation visible while coding:
+
+```plaintext
+Scenario: Web Development
+
+┌─────────────────────┐  ┌──────────────────────────┐
+│ Browser DevTools    │  │ VS Code Editor           │
+│ (Pinned + 70% α)    │  │                          │
+│                     │  │                          │
+│ Console logs        │  │  function handleClick()  │
+│ Network requests    │  │  {                       │
+└─────────────────────┘  │    // Implementation     │
+   Always visible        │  }                       │
+                          └──────────────────────────┘
+```
+
+### Monitoring Dashboards
+
+<CardGroup cols={2}>
+  <Card title="System Monitoring">
+    Pin Task Manager or Resource Monitor to track performance during testing
+  </Card>
+  
+  <Card title="Chat Applications">
+    Keep Slack or Teams chat visible for incoming messages
+  </Card>
+  
+  <Card title="Timers & Clocks">
+    Pin timer applications for time-sensitive tasks
+  </Card>
+  
+  <Card title="Media Controls">
+    Keep music player controls accessible while working
+  </Card>
+</CardGroup>
+
+### Multi-Monitor Workflows
+
+Optimize screen real estate:
+
+1. Pin small utility windows on primary monitor
+2. Use transparency to maintain visibility of background work
+3. Quick-pin reference windows when switching focus
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win+Ctrl+T` | Pin/Unpin active window (default) |
+| `Win+Ctrl++` | Increase window transparency (same modifiers as pin hotkey) |
+| `Win+Ctrl+-` | Decrease window transparency (same modifiers as pin hotkey) |
+
+<Note>
+Transparency shortcuts use the same modifier keys as the configured pin hotkey.
+</Note>
+
+## Technical Details
+
+### Window Event Handling
+
+Always On Top subscribes to multiple Windows events:
+
+```cpp
+// Event subscriptions (AlwaysOnTop.cpp:450)
+std::array<DWORD, 7> events_to_subscribe = {
+    EVENT_OBJECT_LOCATIONCHANGE,  // Window moved/resized
+    EVENT_SYSTEM_MINIMIZESTART,   // Window minimized
+    EVENT_SYSTEM_MINIMIZEEND,     // Window restored
+    EVENT_SYSTEM_MOVESIZEEND,     // Move/resize completed
+    EVENT_SYSTEM_FOREGROUND,      // Window became foreground
+    EVENT_OBJECT_DESTROY,         // Window closed
+    EVENT_OBJECT_FOCUS,           // Window gained focus
+};
+```
+
+### Border Rendering
+
+Borders are implemented as separate layered windows that follow the pinned window:
+
+- Uses `WS_EX_LAYERED` and `WS_EX_TRANSPARENT` extended styles
+- Updates position on `EVENT_OBJECT_LOCATIONCHANGE`
+- Automatically hides when pinned window is minimized
+- DPI-aware for high-resolution displays
+
+### Virtual Desktop Support
+
+Always On Top is virtual desktop aware:
+
+```cpp
+// Virtual desktop handling (AlwaysOnTop.cpp:324)
+bool AlwaysOnTop::AssignBorder(HWND window)
+{
+    if (m_virtualDesktopUtils.IsWindowOnCurrentDesktop(window) && 
+        AlwaysOnTopSettings::settings().enableFrame)
+    {
+        auto border = WindowBorder::Create(window, m_hinstance);
+        if (border)
+        {
+            m_topmostWindows[window] = std::move(border);
+        }
+    }
+    return true;
+}
+```
+
+### Elevation Awareness
+
+When a pinned window is elevated and PowerToys is not, Always On Top shows a notification:
+
+- Warns about potential issues with elevated windows
+- Provides option to run PowerToys as administrator
+- "Don't show again" checkbox for user preference
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Border not showing around pinned window">
+    **Possible causes:**
+    - Border feature disabled in settings
+    - Window on different virtual desktop
+    - DPI scaling issues
+    
+    **Solutions:**
+    1. Check "Show border around pinned windows" in settings
+    2. Verify window is on current virtual desktop
+    3. Try adjusting border thickness (src/modules/alwaysontop/AlwaysOnTop/AlwaysOnTop.cpp:159)
+  </Accordion>
+  
+  <Accordion title="Window won't stay on top">
+    **Possible causes:**
+    - Application in excluded apps list
+    - Game Mode is active (if blocking enabled)
+    - Elevated window with PowerToys not elevated
+    
+    **Solutions:**
+    1. Check excluded apps list in settings
+    2. Disable "Block in Game Mode" if needed
+    3. Run PowerToys as administrator (src/modules/alwaysontop/AlwaysOnTop/AlwaysOnTop.cpp:789)
+  </Accordion>
+  
+  <Accordion title="Transparency controls not working">
+    **Transparency only works on pinned windows**
+    
+    1. Ensure window is pinned first (has border or system menu checkmark)
+    2. Use the transparency hotkeys: `Win+Ctrl+Plus` / `Win+Ctrl+Minus`
+    3. Check that modifiers match your pin hotkey configuration
+    
+    **Implementation reference:** src/modules/alwaysontop/AlwaysOnTop/AlwaysOnTop.cpp:839
+  </Accordion>
+  
+  <Accordion title="System menu option not appearing">
+    1. Verify "Show in system menu" is enabled in settings
+    2. Some applications customize their system menus and may not show the option
+    3. Try using the hotkey instead
+    
+    **System menu integration:** src/modules/alwaysontop/AlwaysOnTop/AlwaysOnTop.cpp:516
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+- [FancyZones](/utilities/fancyzones) - Advanced window layout management
+- [Crop and Lock](/utilities/crop-and-lock) - Crop window content
+- [PowerToys Run](/utilities/powertoys-run) - Quick window switching

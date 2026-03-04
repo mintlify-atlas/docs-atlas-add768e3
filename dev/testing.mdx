@@ -1,0 +1,581 @@
+---
+title: Testing PowerToys
+description: Guide to writing and running unit tests, UI tests, and fuzz tests for PowerToys modules
+---
+
+## Test Types
+
+PowerToys uses multiple types of testing to ensure quality:
+
+| Test Type | Purpose | Tools | Requirements |
+|-----------|---------|-------|-------------|
+| **Unit Tests** | Test individual functions and classes | MSTest, xUnit | Standard dev environment |
+| **UI Tests** | Test user interface and interactions | WinAppDriver, MSTest | WinAppDriver v1.2.1, Developer Mode |
+| **Fuzz Tests** | Find security vulnerabilities | OneFuzz, SharpFuzz | .NET 8, OneFuzz service |
+
+## Unit Tests
+
+### Finding Unit Tests
+
+Unit test projects follow naming conventions:
+
+```
+<Product>UnitTests
+<Product>*UnitTests
+```
+
+**Examples:**
+- `FancyZonesUnitTests`
+- `AdvancedPasteUnitTests`
+- `PowerLauncherUnitTests`
+
+**Typical locations:**
+- Same folder as the module: `src/modules/<Module>/Tests/`
+- Sibling folder: `src/modules/<Module>/<Module>UnitTests/`
+- Separate test directory: `src/tests/<Module>UnitTests/`
+
+### Running Unit Tests
+
+#### Using Visual Studio Test Explorer
+
+1. Open Test Explorer:
+   - Menu: **Test > Test Explorer**
+   - Keyboard: `Ctrl+E, T`
+
+2. Build the test project first:
+   ```powershell
+   cd src\modules\<Module>\Tests\
+   ..\..\..\..\tools\build\build.ps1
+   ```
+
+3. Wait for exit code 0 (build success)
+
+4. Run tests in Test Explorer:
+   - Click **Run All** to run all tests
+   - Right-click specific test to run individually
+   - Use search/filter to find specific tests
+
+<Warning>
+**Do not use `dotnet test`** in this repository. PowerToys uses MSBuild and Visual Studio Test platform. Use Test Explorer or `vstest.console.exe` instead.
+</Warning>
+
+#### Using vstest.console.exe
+
+Run tests from command line:
+
+```powershell
+# Run all tests in assembly
+vstest.console.exe x64\Debug\FancyZonesUnitTests\FancyZonesUnitTests.dll
+
+# Run specific test
+vstest.console.exe x64\Debug\FancyZonesUnitTests\FancyZonesUnitTests.dll /Tests:TestName
+
+# Run tests matching filter
+vstest.console.exe x64\Debug\FancyZonesUnitTests\FancyZonesUnitTests.dll /TestCaseFilter:"Priority=1"
+```
+
+### Writing Unit Tests
+
+#### C# Unit Tests
+
+Create test class with MSTest:
+
+```csharp
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace PowerToys.ModuleName.UnitTests
+{
+    [TestClass]
+    public class ModuleFeatureTests
+    {
+        [TestMethod]
+        public void TestMethodName_Scenario_ExpectedResult()
+        {
+            // Arrange
+            var module = new ModuleClass();
+            var input = "test input";
+
+            // Act
+            var result = module.ProcessInput(input);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual("expected output", result);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void TestMethodName_NullInput_ThrowsException()
+        {
+            // Arrange
+            var module = new ModuleClass();
+
+            // Act
+            module.ProcessInput(null); // Should throw
+        }
+    }
+}
+```
+
+#### C++ Unit Tests
+
+Using Microsoft Native Unit Test Framework:
+
+```cpp
+#include "CppUnitTest.h"
+#include "ModuleClass.h"
+
+using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+
+namespace ModuleUnitTests
+{
+    TEST_CLASS(ModuleFeatureTests)
+    {
+    public:
+        TEST_METHOD(TestMethodName_Scenario_ExpectedResult)
+        {
+            // Arrange
+            ModuleClass module;
+            std::wstring input = L"test input";
+
+            // Act
+            auto result = module.ProcessInput(input);
+
+            // Assert
+            Assert::IsFalse(result.empty());
+            Assert::AreEqual(L"expected output", result.c_str());
+        }
+    };
+}
+```
+
+## UI Tests
+
+### Prerequisites
+
+1. **Install WinAppDriver v1.2.1:**
+   - Download from [WinAppDriver releases](https://github.com/microsoft/WinAppDriver/releases/tag/v1.2.1)
+   - Install to default location: `C:\Program Files (x86)\Windows Application Driver`
+
+2. **Enable Developer Mode:**
+   - Settings > Update & Security > For developers
+   - Select "Developer mode"
+
+3. **Close PowerToys** before running UI tests
+
+### Running UI Tests
+
+1. Build PowerToys solution:
+   ```powershell
+   .\tools\build\build.ps1 -Configuration Debug
+   ```
+
+2. Build UI test project:
+   ```powershell
+   cd src\modules\<Module>\Tests\
+   ..\..\..\..\tools\build\build.ps1
+   ```
+
+3. Open Test Explorer (`Ctrl+E, T`)
+
+4. Run UI tests from Test Explorer
+
+### UI Test Project Structure
+
+Follow the naming convention:
+
+```
+{ModuleFolder}/Tests/{ModuleName}-UITests
+```
+
+**Example:** `src/modules/Hosts/Tests/Hosts-UITests/`
+
+#### Project File Template
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\Common.Dotnet.CsWinRT.props" />
+
+  <PropertyGroup>
+    <ProjectGuid>{YOUR-GUID-HERE}</ProjectGuid>
+    <RootNamespace>PowerToys.YourModule.UITests</RootNamespace>
+    <AssemblyName>PowerToys.YourModule.UITests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+
+    <!-- This is a UI test, so don't run as part of MSBuild -->
+    <RunVSTest>false</RunVSTest>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <OutputPath>$(SolutionDir)$(Platform)\$(Configuration)\tests\YourModule.UITests\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" />
+    <ProjectReference Include="..\..\..\common\UITestAutomation\UITestAutomation.csproj" />
+  </ItemGroup>
+</Project>
+```
+
+### Writing UI Tests
+
+Inherit from `UITestBase` class:
+
+```csharp
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PowerToys.UITestAutomation;
+
+namespace PowerToys.YourModule.UITests
+{
+    [TestClass]
+    public class ModuleUITests : UITestBase
+    {
+        // Constructor sets scope
+        public ModuleUITests()
+            : base(PowerToysModule.YourModule, WindowSize.Large)
+        {
+        }
+
+        [TestMethod("YourModule.UI.BasicTest")]
+        [TestCategory("YourModule #1")]
+        public void TestBasicFunctionality()
+        {
+            // Find UI element
+            var button = this.Find<Button>("AddButton");
+            
+            // Interact with element
+            button.Click();
+
+            // Verify result
+            Assert.IsTrue(this.Has<TextBox>("ResultTextBox"), 
+                "Result should be displayed");
+        }
+
+        [TestMethod("YourModule.UI.VisualTest")]
+        public void TestVisualAppearance()
+        {
+            var container = this.Find("MainContainer");
+            
+            // Visual assertion - compares screenshot
+            VisualAssert.AreEqual(this.TestContext, container, "ExpectedView");
+        }
+    }
+}
+```
+
+### UI Test Scope Options
+
+```csharp
+// Default: Starts from PowerToys Settings UI
+public ModuleUITests() : base() { }
+
+// Module-specific: Starts from your module's UI
+public ModuleUITests() 
+    : base(PowerToysModule.YourModule, WindowSize.Small_Vertical) { }
+```
+
+**Window size options:**
+- `WindowSize.Small_Vertical`
+- `WindowSize.Large`
+- `WindowSize.Maximized`
+
+### Common UI Test Patterns
+
+#### Finding Elements
+
+```csharp
+// By AutomationId
+var element = this.Find("ElementAutomationId");
+
+// By type and name
+var button = this.Find<Button>("ButtonName");
+
+// Check if exists
+bool exists = this.Has<TextBox>("TextBoxName");
+
+// Check for single element
+bool hasOne = this.HasOne<ComboBox>("ComboBoxName");
+```
+
+#### Interacting with Elements
+
+```csharp
+// Click button
+var button = this.Find<Button>("SaveButton");
+button.Click();
+
+// Enter text
+var textBox = this.Find<TextBox>("InputField");
+textBox.SendKeys("test input");
+
+// Select combo box item
+var comboBox = this.Find<ComboBox>("ModeSelector");
+comboBox.SelectItemByName("Advanced");
+
+// Toggle switch
+var toggle = this.Find<ToggleButton>("EnableFeature");
+toggle.Toggle();
+```
+
+#### Visual Assertions
+
+```csharp
+// Compare element appearance to baseline
+var container = this.Find("MainView");
+VisualAssert.AreEqual(this.TestContext, container, "ExpectedState");
+
+// Baseline images stored in TestData folder
+// Named: ExpectedState.png
+```
+
+### UI Test Pipeline
+
+UI tests run automatically in the build pipeline:
+
+**Pipeline URL:** https://microsoft.visualstudio.com/Dart/_build?definitionId=161438
+
+**Pipeline options:**
+
+```yaml
+buildSource:
+  - latestMainOfficialBuild  # Test against latest release
+  - buildNow                 # Test current source code
+  - specificBuildId          # Test specific build
+
+specificBuildId: "12345"    # Build ID when using specificBuildId
+
+uiTestModules:
+  - 'UITests-FancyZones'     # Run specific module tests
+  - 'MouseUtils.UITests'     # Or multiple modules
+  - []                       # Empty = run all tests
+```
+
+## Fuzz Tests
+
+Fuzz testing identifies security vulnerabilities by providing random/malformed input.
+
+### When to Use Fuzz Tests
+
+**Required for modules that:**
+- Handle file I/O (reading, writing, parsing files)
+- Process user input (text, commands, data)
+- Parse external data formats (JSON, XML, images, etc.)
+- Interface with external APIs or services
+
+### Fuzz Test Implementation
+
+#### C# Fuzz Tests with SharpFuzz
+
+1. **Add NuGet packages:**
+   ```xml
+   <PackageReference Include="SharpFuzz" Version="2.1.1" />
+   <PackageReference Include="Microsoft.OneFuzz.SDK" Version="1.0.0" />
+   ```
+
+2. **Create fuzz target:**
+   ```csharp
+   using SharpFuzz;
+   using Microsoft.OneFuzz.SDK;
+
+   public class FuzzTarget
+   {
+       public static void FuzzMethod(string input)
+       {
+           try
+           {
+               // Code to test with fuzzing input
+               var result = ProcessInput(input);
+           }
+           catch (Exception ex)
+           {
+               // Expected exceptions should be caught
+               // Unexpected exceptions will be reported
+           }
+       }
+
+       public static void Main(string[] args)
+       {
+           // SharpFuzz entry point
+           Fuzzer.Run(() =>
+           {
+               var input = Console.ReadLine();
+               FuzzMethod(input);
+           });
+       }
+   }
+   ```
+
+#### C++ Fuzz Tests with libFuzzer
+
+```cpp
+#include <stdint.h>
+#include <stddef.h>
+#include "ModuleToTest.h"
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
+    if (size < 4) return 0;
+
+    try
+    {
+        // Convert fuzzing input to usable format
+        std::string input(reinterpret_cast<const char*>(data), size);
+        
+        // Test your code with fuzzing input
+        ProcessInput(input);
+    }
+    catch (...)
+    {
+        // Expected exceptions
+    }
+
+    return 0;
+}
+```
+
+### Running Fuzz Tests Locally
+
+```powershell
+# Build fuzz target
+dotnet build src\modules\<Module>\FuzzTests\
+
+# Run with SharpFuzz
+sharpfuzz .\x64\Debug\<Module>.FuzzTests.dll
+
+# Provide seed corpus (optional)
+sharpfuzz .\x64\Debug\<Module>.FuzzTests.dll --corpus=.\testdata\corpus
+```
+
+### OneFuzz Integration
+
+PowerToys integrates with Microsoft's OneFuzz service for continuous fuzzing:
+
+- Runs automatically in CI/CD pipeline
+- Generates crash reports for security team
+- Provides coverage metrics
+- See [Fuzzing Testing docs](https://github.com/microsoft/PowerToys/blob/main/doc/devdocs/tools/fuzzingtesting.md)
+
+## Test Requirements
+
+### When to Update Tests
+
+**Always update tests when:**
+- Adding new functionality
+- Changing existing behavior
+- Fixing bugs
+- Refactoring code
+
+**Acceptable to skip tests when:**
+- Comment-only changes
+- Documentation updates
+- String/resource changes (with justification)
+- Whitespace/formatting fixes
+
+### Test Coverage Expectations
+
+- New modules **must** have unit tests
+- UI-based modules **should** have UI tests
+- File/input handling modules **must** have fuzz tests
+- Bug fixes **should** include regression tests
+
+## Testing Discipline
+
+### Before Opening a PR
+
+1. **Build succeeds** with exit code 0
+2. **All existing tests pass** locally
+3. **New tests added** for new functionality
+4. **Tests pass** in Test Explorer
+5. **Fuzz tests implemented** if handling file I/O or user input
+
+### Test Checklist
+
+- [ ] Unit tests written for new code
+- [ ] UI tests written for UI changes (if applicable)
+- [ ] Fuzz tests written for file/input handling (if applicable)
+- [ ] All tests pass locally
+- [ ] Tests documented with clear names
+- [ ] Edge cases covered
+- [ ] Exception handling tested
+- [ ] Performance considered for test execution time
+
+## Special Testing Requirements
+
+### Multi-Monitor Testing
+
+**Utilities requiring multi-monitor testing:**
+- FancyZones
+- Display Fuser
+- Mouse Jump
+
+**Test configurations:**
+- 2+ monitors with different resolutions
+- Different DPI settings (100%, 125%, 150%, 200%)
+- Primary monitor on left/right
+- Vertical arrangements
+- Monitor disconnect/reconnect
+
+### Multi-Computer Testing
+
+**Mouse Without Borders:**
+- Requires 2+ physical computers
+- Cannot be adequately tested with VMs
+- Test across different Windows versions
+
+### Elevation Testing
+
+Test both scenarios:
+- PowerToys running as normal user
+- PowerToys running elevated (administrator)
+
+Ensure graceful degradation when not elevated.
+
+## Debugging Test Failures
+
+### Test Explorer Debugging
+
+1. Right-click test in Test Explorer
+2. Select **Debug Selected Tests**
+3. Breakpoints will be hit during test execution
+
+### Test Output
+
+View test output in Test Explorer:
+1. Select failed test
+2. Click "Open additional output for this result" link
+3. Review stack traces and error messages
+
+### UI Test Debugging
+
+```csharp
+// Add delays for visual inspection
+System.Threading.Thread.Sleep(2000);
+
+// Take screenshots on failure
+if (!condition)
+{
+    var screenshot = this.TakeScreenshot();
+    this.TestContext.AddResultFile(screenshot);
+    Assert.Fail("Condition not met");
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building" icon="hammer" href="/dev/building">
+    Build PowerToys from source
+  </Card>
+  <Card title="Debugging" icon="bug" href="/dev/debugging">
+    Debug PowerToys modules effectively
+  </Card>
+  <Card title="Coding Style" icon="code" href="/dev/coding-style">
+    Follow PowerToys coding standards
+  </Card>
+  <Card title="Creating New Utility" icon="plus" href="/dev/creating-new-utility">
+    Create a new PowerToys utility
+  </Card>
+</CardGroup>

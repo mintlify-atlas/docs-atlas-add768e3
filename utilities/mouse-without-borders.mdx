@@ -1,0 +1,294 @@
+---
+title: Mouse Without Borders
+description: Control multiple computers with a single mouse and keyboard
+---
+
+## Overview
+
+Mouse Without Borders allows you to control multiple computers from a single mouse and keyboard. Move your cursor across computer boundaries as if they were multiple monitors, and seamlessly share clipboard content and files between machines.
+
+<Warning>
+  Mouse Without Borders requires at least 2 physical computers on the same network. It does NOT work with virtual machines on the same host.
+</Warning>
+
+## How to Activate
+
+Mouse Without Borders operates automatically once configured and enabled in PowerToys settings.
+
+### Initial Setup
+
+<Steps>
+  <Step title="Enable on First Computer">
+    Enable Mouse Without Borders in PowerToys Settings on your primary computer
+  </Step>
+  <Step title="Generate Security Code">
+    A security code is generated for pairing other computers
+  </Step>
+  <Step title="Install on Additional Computers">
+    Install PowerToys and enable Mouse Without Borders on other computers you want to control
+  </Step>
+  <Step title="Enter Security Code">
+    Enter the security code from the first computer to establish connection
+  </Step>
+  <Step title="Arrange Computers">
+    Configure the physical layout of your computers in the settings UI
+  </Step>
+</Steps>
+
+## Configuration Options
+
+### Connection Settings
+
+<ParamField path="UseService" type="boolean" default="false">
+  Run Mouse Without Borders as a Windows service for enhanced compatibility and reliability. Service mode allows:
+  - Operation before user login
+  - Enhanced security isolation
+  - Better stability on some systems
+  
+  <Warning>
+    Changing service mode requires administrator privileges and will restart the Mouse Without Borders application.
+  </Warning>
+</ParamField>
+
+### Keyboard Shortcuts
+
+Mouse Without Borders provides several hotkeys for managing multi-computer control:
+
+<ParamField path="ToggleEasyMouseShortcut" type="hotkey">
+  Toggle "Easy Mouse" mode for simplified cursor movement between machines
+</ParamField>
+
+<ParamField path="LockMachineShortcut" type="hotkey">
+  Lock all connected machines simultaneously
+</ParamField>
+
+<ParamField path="Switch2AllPCShortcut" type="hotkey">
+  Switch input to all PCs mode (broadcast keyboard input to all machines)
+</ParamField>
+
+<ParamField path="ReconnectShortcut" type="hotkey">
+  Force reconnection to all machines in the cluster
+</ParamField>
+
+## Features
+
+### Seamless Cursor Movement
+
+Move your mouse cursor across computer boundaries just like moving between monitors:
+- Cursor transitions smoothly between machines
+- Works with any screen arrangement (left, right, above, below)
+- Configurable screen edge behavior
+
+### Unified Keyboard Control
+
+Type on any connected computer without switching keyboards:
+- Keyboard input follows cursor position
+- Special key combinations work across machines
+- Support for modifier keys (Ctrl, Alt, Shift, Win)
+
+### Clipboard Sharing
+
+Copy and paste content between connected computers:
+- Text clipboard synchronization
+- Support for formatted text and rich content
+- Automatic clipboard transfer on cursor switch
+
+### File Transfer
+
+Drag and drop files between computers:
+- Direct file transfer without network shares
+- Encrypted transfer over local network
+- Support for multiple files and folders
+
+### Security Features
+
+- Encrypted communications between machines
+- Security code-based pairing
+- Firewall rule configuration
+- Optional Windows service isolation
+
+## Use Cases
+
+### Multi-Computer Workflows
+
+Control desktop and laptop simultaneously without switching input devices.
+
+```
+Scenario: Development on desktop, testing on laptop
+Setup: Place laptop to the right of desktop in settings
+Usage: Move cursor to right edge to control laptop
+Result: Single keyboard/mouse controls both machines
+```
+
+### Home Office Setup
+
+Manage personal and work computers side-by-side:
+- Keep work and personal data separated
+- Seamlessly move between machines
+- Share clipboard for quick data transfer
+
+<Tip>
+  Arrange computers in settings to match your physical desk layout for intuitive cursor movement.
+</Tip>
+
+### Server Management
+
+Control multiple servers from a single workstation:
+- Reduce keyboard/mouse clutter
+- Quick server access without KVM switch
+- Monitor multiple systems simultaneously
+
+### Creative Workflows
+
+Spread your creative work across multiple machines:
+- Edit on one machine, preview on another
+- Use different computers for different tasks
+- Transfer files quickly during production
+
+## Network Requirements
+
+<Warning>
+  All computers must be on the same local network and able to communicate directly.
+</Warning>
+
+### Firewall Configuration
+
+Mouse Without Borders requires network communication between computers:
+
+1. **Automatic Configuration:** Use the "Add Firewall Rule" button in settings (requires administrator privileges)
+2. **Manual Configuration:** Allow PowerToys.MouseWithoutBorders.exe through Windows Firewall:
+   - Protocol: TCP
+   - Direction: Inbound
+   - Profile: Private/Domain networks
+
+### Port Usage
+
+Mouse Without Borders uses TCP communication for:
+- Control messages
+- Clipboard synchronization  
+- File transfers
+
+<Note>
+  The exact port numbers are dynamically negotiated during connection setup.
+</Note>
+
+## Service Mode
+
+### Benefits of Service Mode
+
+- **Pre-Login Control:** Control computer before Windows login
+- **Enhanced Stability:** Isolated process space
+- **Elevated Privileges:** Better compatibility with protected applications
+- **Automatic Recovery:** Service auto-restart on failure
+
+### Service Management
+
+When service mode is enabled:
+- Service name: `PowerToys.MWB.Service`
+- Service binary: `PowerToys.MouseWithoutBordersService.exe`
+- Startup type: Manual (demand start)
+- Security: User-specific permissions configured automatically
+
+<Warning>
+  Disabling service mode requires the main application to shut down completely, which may take a few seconds.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Computers cannot connect">
+    - Verify all computers are on the same network
+    - Check firewall settings on all machines
+    - Ensure Mouse Without Borders is enabled in PowerToys on all computers
+    - Try the "Reconnect" shortcut
+    - Verify security code was entered correctly
+  </Accordion>
+  
+  <Accordion title="Cursor doesn't move between machines">
+    - Check computer arrangement in settings matches physical layout
+    - Verify screen edge alignment between machines
+    - Ensure both machines show as "Connected" in status
+    - Try disabling and re-enabling Mouse Without Borders
+  </Accordion>
+  
+  <Accordion title="Clipboard sharing not working">
+    - Verify clipboard synchronization is enabled in settings
+    - Check that both machines have active connection
+    - Try copying plain text first (formatted content may have issues)
+    - Ensure clipboard is not locked by another application
+  </Accordion>
+  
+  <Accordion title="File transfer fails">
+    - Check available disk space on target machine
+    - Verify network connection is stable
+    - Try smaller files first
+    - Check that file paths don't exceed Windows limits
+  </Accordion>
+  
+  <Accordion title="Service mode won't enable">
+    - Run PowerToys as administrator
+    - Check that Windows Service Manager is accessible
+    - Verify no group policy restrictions on service installation
+    - Check Windows Event Log for service-related errors
+  </Accordion>
+  
+  <Accordion title="Keyboard input not working on secondary machine">
+    - Ensure cursor is on the target machine
+    - Check that no application on target machine is capturing keyboard exclusively
+    - Verify keyboard layout settings on both machines
+    - Try clicking on target machine's desktop to establish focus
+  </Accordion>
+</AccordionGroup>
+
+## Security Considerations
+
+<Warning>
+  Mouse Without Borders is designed for trusted home and office networks. Do not use on public or untrusted networks.
+</Warning>
+
+### Best Practices
+
+1. **Network Security:**
+   - Use only on private, trusted networks
+   - Ensure network is password-protected
+   - Consider network segmentation for sensitive work
+
+2. **Access Control:**
+   - Keep security codes confidential
+   - Regularly update PowerToys to get security patches
+   - Monitor connected machines list
+
+3. **Service Mode Security:**
+   - Service runs with user-specific permissions
+   - Security descriptor limits access to current user
+   - Service requires manual start (not automatic)
+
+## Technical Details
+
+### Architecture
+
+- **Main Process:** `PowerToys.MouseWithoutBorders.exe` (user interface and coordination)
+- **Service Process:** `PowerToys.MouseWithoutBordersService.exe` (optional service mode)
+- **Helper Process:** `PowerToys.MouseWithoutBordersHelper.exe` (supporting functions)
+
+### Communication Protocol
+
+- TCP-based peer-to-peer communication
+- Encrypted message passing
+- Automatic connection recovery
+- Heartbeat mechanism for connection monitoring
+
+### Platform Support
+
+- **Operating Systems:** Windows 10 1803+ (April 2018 Update or newer)
+- **Network:** IPv4 local network
+- **Hardware:** Standard HID mouse and keyboard
+
+## Source Code Reference
+
+The Mouse Without Borders implementation can be found at:
+- Module interface: `src/modules/MouseWithoutBorders/ModuleInterface/dllmain.cpp`
+- Main application: `src/modules/MouseWithoutBorders/App/`
+- Service implementation: `src/modules/MouseWithoutBorders/App/Service/`
+- Service registration: Lines 206-363 in dllmain.cpp
+- Hotkey management: Lines 559-612 in dllmain.cpp

@@ -1,0 +1,712 @@
+---
+title: Command Palette Extensions
+description: Create rich extensions for the Windows Command Palette using the WinRT Extension SDK
+---
+
+# Command Palette Extensions
+
+Command Palette (CmdPal) is the next-generation launcher for PowerToys, designed with extensibility as a core principle. Unlike PowerToys Run plugins, Command Palette extensions are WinRT-based and language-agnostic, allowing developers to create rich, interactive experiences.
+
+<Note>
+Command Palette is currently in preview. The API may introduce breaking changes before reaching v1.0.0.
+</Note>
+
+## Extension Architecture
+
+Command Palette extensions are built on Windows Runtime (WinRT) components, making them accessible from any language that supports WinRT interfaces including C#, C++/WinRT, Rust, and more.
+
+### Core Components
+
+- **IExtension** - Entry point for extensions
+- **ICommandProvider** - Provides commands and pages
+- **IListPage** - Display searchable lists of items
+- **IContentPage** - Display rich content (forms, markdown, trees)
+- **ICommand** - Individual commands and actions
+- **IExtensionHost** - Host APIs for status, logging, and notifications
+
+## Creating Your First Extension
+
+### Quick Start: Using the Command Palette
+
+The fastest way to create an extension:
+
+1. Open Command Palette (<kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>)
+2. Type "Create extension"
+3. Enter your project name and display name
+4. Choose a location for your project
+5. Open the generated `.sln` file in Visual Studio
+
+### Manual Project Setup
+
+If you prefer to create the project manually:
+
+1. **Create a Windows Runtime Component** project in Visual Studio
+2. **Target Windows 10.0.22621.0** or higher
+3. **Add references**:
+   - `Microsoft.CommandPalette.Extensions`
+   - `Microsoft.CommandPalette.Extensions.Toolkit` (C# helper library)
+
+## Extension SDK Reference
+
+### IExtension Interface
+
+The main entry point for your extension:
+
+```csharp
+namespace Microsoft.CommandPalette.Extensions
+{
+    interface IExtension
+    {
+        // Get a provider of the specified type
+        IInspectable GetProvider(ProviderType providerType);
+        
+        // Clean up resources
+        void Dispose();
+    }
+    
+    enum ProviderType
+    {
+        Commands = 0,
+    };
+}
+```
+
+### ICommandProvider Interface
+
+Provides commands and pages to the Command Palette:
+
+```csharp src/modules/cmdpal/extensionsdk/Microsoft.CommandPalette.Extensions/Microsoft.CommandPalette.Extensions.idl
+interface ICommandProvider : Windows.Foundation.IClosable, INotifyItemsChanged
+{
+    // Unique identifier for this provider
+    String Id { get; };
+    
+    // Display name shown in UI
+    String DisplayName { get; };
+    
+    // Provider icon
+    IIconInfo Icon { get; };
+    
+    // Settings page (optional)
+    ICommandSettings Settings { get; };
+    
+    // Whether provider is currently frozen/disabled
+    Boolean Frozen { get; };
+    
+    // Top-level commands displayed on main page
+    ICommandItem[] TopLevelCommands();
+    
+    // Fallback commands for query handling
+    IFallbackCommandItem[] FallbackCommands();
+    
+    // Get a specific command by ID
+    ICommand GetCommand(String id);
+    
+    // Initialize with host APIs
+    void InitializeWithHost(IExtensionHost host);
+}
+```
+
+### IListPage Interface
+
+Display searchable lists of items:
+
+```csharp src/modules/cmdpal/extensionsdk/Microsoft.CommandPalette.Extensions/Microsoft.CommandPalette.Extensions.idl
+interface IListPage : IPage, INotifyItemsChanged
+{
+    // Current search text
+    String SearchText { get; };
+    
+    // Placeholder text in search box
+    String PlaceholderText { get; };
+    
+    // Whether to show details pane
+    Boolean ShowDetails { get; };
+    
+    // Filter options
+    IFilters Filters { get; };
+    
+    // Grid layout properties
+    IGridProperties GridProperties { get; };
+    
+    // Whether more items are available
+    Boolean HasMoreItems { get; };
+    
+    // Content shown when list is empty
+    ICommandItem EmptyContent { get; };
+    
+    // Get items to display
+    IListItem[] GetItems();
+    
+    // Load more items
+    void LoadMore();
+}
+```
+
+### ICommand Result Types
+
+Commands return results that control navigation:
+
+```csharp src/modules/cmdpal/extensionsdk/Microsoft.CommandPalette.Extensions/Microsoft.CommandPalette.Extensions.idl
+enum CommandResultKind
+{
+    Dismiss,    // Reset to main page and close palette
+    GoHome,     // Go back to main page, keep open
+    GoBack,     // Go back one level
+    Hide,       // Hide palette but keep current page
+    KeepOpen,   // Do nothing, stay on current page
+    GoToPage,   // Navigate to another page
+    ShowToast,  // Display a transient message
+    Confirm,    // Display a confirmation dialog
+};
+
+interface ICommandResult
+{
+    CommandResultKind Kind { get; };
+    ICommandResultArgs Args { get; };
+}
+```
+
+## Building a Simple Extension
+
+Here's a complete example of a basic Command Palette extension:
+
+### Extension Entry Point
+
+```csharp
+using Microsoft.CommandPalette.Extensions;
+
+namespace MyFirstExtension
+{
+    public sealed class Extension : IExtension
+    {
+        private MyCommandProvider _commandProvider;
+
+        public IInspectable GetProvider(ProviderType providerType)
+        {
+            if (providerType == ProviderType.Commands)
+            {
+                _commandProvider ??= new MyCommandProvider();
+                return _commandProvider;
+            }
+            return null;
+        }
+
+        public void Dispose()
+        {
+            _commandProvider?.Dispose();
+        }
+    }
+}
+```
+
+### Command Provider
+
+```csharp
+using Microsoft.CommandPalette.Extensions;
+using Microsoft.CommandPalette.Extensions.Toolkit;
+
+namespace MyFirstExtension
+{
+    public class MyCommandProvider : CommandProvider
+    {
+        private readonly ListItem _mainListItem;
+
+        public MyCommandProvider()
+        {
+            Id = "com.example.myfirstextension";
+            DisplayName = "My First Extension";
+            Icon = new IconInfo
+            {
+                Light = new IconData { Icon = "ms-appx:///Assets/icon-light.png" },
+                Dark = new IconData { Icon = "ms-appx:///Assets/icon-dark.png" }
+            };
+
+            // Create main page
+            _mainListItem = new ListItem(new MyListPage())
+            {
+                Title = "My Extension",
+                Subtitle = "Click to open"
+            };
+        }
+
+        public override ICommandItem[] TopLevelCommands()
+        {
+            return new[] { _mainListItem };
+        }
+
+        public override IFallbackCommandItem[] FallbackCommands()
+        {
+            return Array.Empty<IFallbackCommandItem>();
+        }
+    }
+}
+```
+
+### List Page
+
+```csharp
+using Microsoft.CommandPalette.Extensions;
+using Microsoft.CommandPalette.Extensions.Toolkit;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace MyFirstExtension
+{
+    public class MyListPage : ListPage
+    {
+        private List<string> _items = new()
+        {
+            "Item 1",
+            "Item 2",
+            "Item 3",
+            "Item 4",
+            "Item 5"
+        };
+
+        public MyListPage()
+        {
+            Name = "my-list-page";
+            Title = "My Items";
+            PlaceholderText = "Search items...";
+        }
+
+        public override IListItem[] GetItems()
+        {
+            var searchText = SearchText?.ToLower() ?? "";
+            
+            return _items
+                .Where(item => item.ToLower().Contains(searchText))
+                .Select(item => new ListItem(new AnonymousCommand(
+                    name: item,
+                    invoke: () =>
+                    {
+                        // Copy to clipboard when clicked
+                        ClipboardHelper.SetText(item);
+                        return CommandResult.ShowToast($"Copied {item} to clipboard");
+                    }))
+                {
+                    Title = item,
+                    Subtitle = "Click to copy to clipboard"
+                })
+                .ToArray();
+        }
+    }
+}
+```
+
+## Real-World Example: Calculator Extension
+
+Here's a simplified version of the Calculator extension:
+
+```csharp src/modules/cmdpal/ext/Microsoft.CmdPal.Ext.Calc/CalculatorCommandProvider.cs
+using Microsoft.CommandPalette.Extensions;
+using Microsoft.CommandPalette.Extensions.Toolkit;
+
+namespace Microsoft.CmdPal.Ext.Calc
+{
+    public partial class CalculatorCommandProvider : CommandProvider
+    {
+        private readonly ListItem _listItem;
+        private readonly FallbackCalculatorItem _fallback;
+        private static ISettingsInterface settings = new SettingsManager();
+
+        public CalculatorCommandProvider()
+        {
+            Id = "com.microsoft.cmdpal.builtin.calculator";
+            DisplayName = "Calculator";
+            Icon = Icons.CalculatorIcon;
+            Settings = ((SettingsManager)settings).Settings;
+
+            // Main calculator page
+            _listItem = new ListItem(new CalculatorListPage(settings))
+            {
+                MoreCommands = new[] 
+                { 
+                    new CommandContextItem(((SettingsManager)settings).Settings.SettingsPage) 
+                },
+            };
+
+            // Fallback for math expressions
+            _fallback = new FallbackCalculatorItem(settings);
+        }
+
+        public override ICommandItem[] TopLevelCommands() => new[] { _listItem };
+
+        public override IFallbackCommandItem[] FallbackCommands() => new[] { _fallback };
+    }
+}
+```
+
+**Key features**:
+- Top-level command for main calculator page
+- Fallback command for evaluating math expressions typed anywhere
+- Settings page accessible via context menu
+- Icon configuration for light/dark themes
+
+## Advanced Features
+
+### Form Pages
+
+Create interactive forms using Adaptive Cards JSON:
+
+```csharp
+using Microsoft.CommandPalette.Extensions;
+using Microsoft.CommandPalette.Extensions.Toolkit;
+
+public class MyFormPage : ContentPage
+{
+    public MyFormPage()
+    {
+        Name = "settings-form";
+        Title = "Settings";
+    }
+
+    public override IContent[] GetContent()
+    {
+        var formContent = new FormContent
+        {
+            TemplateJson = @"{
+                'type': 'AdaptiveCard',
+                'version': '1.5',
+                'body': [
+                    {
+                        'type': 'Input.Text',
+                        'id': 'username',
+                        'label': 'Username',
+                        'placeholder': 'Enter your username'
+                    },
+                    {
+                        'type': 'Input.Toggle',
+                        'id': 'notifications',
+                        'label': 'Enable notifications',
+                        'value': 'true'
+                    }
+                ],
+                'actions': [
+                    {
+                        'type': 'Action.Submit',
+                        'title': 'Save',
+                        'id': 'save'
+                    }
+                ]
+            }",
+            SubmitForm = (inputs, data) =>
+            {
+                // Handle form submission
+                var username = inputs["username"];
+                var notifications = inputs["notifications"];
+                
+                // Save settings
+                SaveSettings(username, notifications);
+                
+                return CommandResult.ShowToast("Settings saved!");
+            }
+        };
+
+        return new[] { formContent };
+    }
+}
+```
+
+### Markdown Content
+
+Display formatted markdown:
+
+```csharp
+using Microsoft.CommandPalette.Extensions;
+using Microsoft.CommandPalette.Extensions.Toolkit;
+
+public class HelpPage : ContentPage
+{
+    public override IContent[] GetContent()
+    {
+        var markdown = new MarkdownContent
+        {
+            Body = @"
+# Welcome to My Extension
+
+This extension provides:
+
+- **Feature 1**: Description of feature 1
+- **Feature 2**: Description of feature 2
+- **Feature 3**: Description of feature 3
+
+## Getting Started
+
+1. First, do this
+2. Then, do that
+3. Finally, enjoy!
+
+For more information, visit [our website](https://example.com).
+            "
+        };
+
+        return new[] { markdown };
+    }
+}
+```
+
+### Dynamic Filtering
+
+Implement `IDynamicListPage` for server-side filtering:
+
+```csharp
+public class SearchResultsPage : ListPage, IDynamicListPage
+{
+    private List<SearchResult> _currentResults = new();
+
+    public new string SearchText
+    {
+        get => base.SearchText;
+        set
+        {
+            if (base.SearchText != value)
+            {
+                base.SearchText = value;
+                PerformSearch(value);
+            }
+        }
+    }
+
+    private async void PerformSearch(string query)
+    {
+        // Show loading state
+        IsLoading = true;
+        
+        // Perform async search
+        _currentResults = await SearchService.SearchAsync(query);
+        
+        // Update UI
+        IsLoading = false;
+        OnItemsChanged(new ItemsChangedEventArgs(_currentResults.Count));
+    }
+
+    public override IListItem[] GetItems()
+    {
+        return _currentResults
+            .Select(result => new ListItem(new AnonymousCommand(
+                name: result.Title,
+                invoke: () => OpenResult(result)))
+            {
+                Title = result.Title,
+                Subtitle = result.Description
+            })
+            .ToArray();
+    }
+}
+```
+
+### Extension Host APIs
+
+Use host APIs for status updates and logging:
+
+```csharp
+public class MyCommandProvider : CommandProvider
+{
+    private IExtensionHost _host;
+
+    public override void InitializeWithHost(IExtensionHost host)
+    {
+        _host = host;
+    }
+
+    private async Task ProcessLongOperation()
+    {
+        // Show indeterminate progress
+        var status = new StatusMessage
+        {
+            State = MessageState.Info,
+            Message = "Processing...",
+            Progress = new ProgressState { IsIndeterminate = true }
+        };
+        
+        await _host.ShowStatus(status, StatusContext.Extension);
+        
+        try
+        {
+            // Do work
+            await DoWorkAsync();
+            
+            // Hide status
+            await _host.HideStatus(status);
+            
+            // Log success
+            await _host.LogMessage(new LogMessage
+            {
+                State = MessageState.Success,
+                Message = "Operation completed successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            await _host.HideStatus(status);
+            
+            await _host.LogMessage(new LogMessage
+            {
+                State = MessageState.Error,
+                Message = $"Operation failed: {ex.Message}"
+            });
+        }
+    }
+}
+```
+
+## Toolkit Helpers (C#)
+
+The `Microsoft.CommandPalette.Extensions.Toolkit` provides useful C# helper classes:
+
+### CommandProvider Base Class
+
+```csharp
+public abstract class CommandProvider : ICommandProvider4
+{
+    public string Id { get; set; }
+    public string DisplayName { get; set; }
+    public IIconInfo Icon { get; set; }
+    public ICommandSettings Settings { get; set; }
+    public bool Frozen { get; set; }
+    
+    public abstract ICommandItem[] TopLevelCommands();
+    public abstract IFallbackCommandItem[] FallbackCommands();
+    
+    // Optional overrides
+    public virtual ICommand GetCommand(string id) => null;
+    public virtual void InitializeWithHost(IExtensionHost host) { }
+    // ...
+}
+```
+
+### AnonymousCommand
+
+Quick command creation:
+
+```csharp
+var command = new AnonymousCommand(
+    name: "my-command",
+    displayName: "Do Something",
+    invoke: () =>
+    {
+        // Perform action
+        return CommandResult.Dismiss;
+    });
+```
+
+### CommandResult Helpers
+
+```csharp
+// Dismiss palette
+return CommandResult.Dismiss;
+
+// Go back to home
+return CommandResult.GoHome;
+
+// Show toast notification
+return CommandResult.ShowToast("Operation completed!");
+
+// Navigate to page
+return CommandResult.GoToPage("my-page-id", NavigationMode.Push);
+
+// Show confirmation dialog
+return CommandResult.Confirm(
+    title: "Delete item?",
+    description: "This action cannot be undone",
+    primaryCommand: deleteCommand,
+    isCritical: true);
+```
+
+## Testing Extensions
+
+### Local Testing
+
+1. **Build your extension** in Visual Studio
+2. **Deploy to Command Palette**:
+   - Build sets up the extension automatically
+   - Or manually copy to extensions folder
+3. **Restart Command Palette**:
+   - Close Command Palette if open
+   - Reopen with <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>
+
+### Debug Extensions
+
+1. Set breakpoints in your extension code
+2. In Visual Studio: **Debug > Attach to Process**
+3. Select `Microsoft.CmdPal.UI.exe`
+4. Open Command Palette and trigger your extension
+
+## Extension Packaging
+
+Extensions can be packaged and distributed:
+
+1. **Build in Release mode**
+2. **Package files**:
+   - Extension DLL
+   - Dependencies
+   - Assets (icons, etc.)
+3. **Create installer or distribution package**
+4. **Provide installation instructions**
+
+<Warning>
+Extensions run with full user privileges. Only install extensions from trusted sources.
+</Warning>
+
+## API Evolution
+
+Command Palette uses versioned APIs:
+
+```csharp src/modules/cmdpal/extensionsdk/Microsoft.CommandPalette.Extensions/Microsoft.CommandPalette.Extensions.idl
+interface ICommandProvider4 : ICommandProvider3
+{
+    // New in version 4
+    ICommandItem GetCommandItem(String id);
+}
+
+interface ICommandProvider3 : ICommandProvider2
+{
+    // New in version 3
+    ICommandItem[] GetDockBands();
+}
+```
+
+You can implement newer interfaces for additional features while maintaining backward compatibility.
+
+## Best Practices
+
+1. **Performance**
+   - Keep `GetItems()` fast (< 100ms)
+   - Use `IDynamicListPage` for expensive searches
+   - Implement `LoadMore()` for large datasets
+
+2. **User Experience**
+   - Provide clear titles and subtitles
+   - Use appropriate icons
+   - Show loading states for long operations
+   - Handle errors gracefully
+
+3. **Resource Management**
+   - Implement proper disposal in `IExtension.Dispose()`
+   - Unsubscribe from events
+   - Clean up background tasks
+
+4. **Accessibility**
+   - Provide keyboard shortcuts where appropriate
+   - Use semantic command names
+   - Support high contrast themes
+
+## Resources
+
+- [Official Command Palette Documentation](https://learn.microsoft.com/windows/powertoys/command-palette/extensibility-overview)
+- [Example Extensions in Source](https://github.com/microsoft/PowerToys/tree/main/src/modules/cmdpal/ext)
+- [WinRT API Reference](https://learn.microsoft.com/windows/winrt/)
+- [Community Extension Examples](https://github.com/zadjii/CmdPalExtensions)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore Example Extensions" icon="code">
+    Check out the built-in extensions in the PowerToys source code for real-world examples
+  </Card>
+  <Card title="Join the Community" icon="users">
+    Share your extensions and get help from other developers
+  </Card>
+</CardGroup>

@@ -1,0 +1,285 @@
+---
+title: Welcome to PowerToys
+description: Supercharge your Windows productivity with powerful utilities
+---
+
+<div className="relative bg-gradient-to-br from-[#0078D4] via-[#0063B1] to-[#004E8C] dark:from-[#0063B1] dark:via-[#004E8C] dark:to-[#003A6B] py-20 overflow-hidden">
+  <div className="absolute inset-0 bg-black/20"></div>
+  <div className="relative max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Microsoft PowerToys
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 mb-8 max-w-2xl">
+          A collection of utilities that help you customize Windows and streamline everyday tasks. From window management to file operations, PowerToys supercharges your productivity.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 bg-white text-[#0078D4] font-semibold rounded-lg hover:bg-white/90 transition-colors"
+          >
+            Get Started
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+          <a 
+            href="/installation" 
+            className="inline-flex items-center px-6 py-3 border-2 border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors"
+          >
+            Install PowerToys
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:flex justify-center">
+        <div className="w-64 h-64 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 flex items-center justify-center">
+          <svg className="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Quick start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get PowerToys running on your Windows machine in minutes
+  </p>
+
+  <Steps>
+    <Step title="Download PowerToys">
+      Choose your preferred installation method:
+      
+      <CodeGroup>
+      ```powershell WinGet
+      winget install Microsoft.PowerToys -s winget
+      ```
+      
+      ```powershell Microsoft Store
+      # Search for "PowerToys" in Microsoft Store
+      # Or visit: https://aka.ms/getPowertoys
+      ```
+      
+      ```powershell GitHub Release
+      # Download from https://github.com/microsoft/PowerToys/releases
+      # Choose PowerToysUserSetup-{version}-x64.exe
+      ```
+      </CodeGroup>
+      
+      <Note>
+        PowerToys requires Windows 10 version 1803 (April 2018 Update) or newer.
+      </Note>
+    </Step>
+
+    <Step title="Launch PowerToys">
+      After installation, PowerToys runs automatically in the system tray. Look for the PowerToys icon in your taskbar notification area.
+      
+      Right-click the icon to access:
+      - **Settings** - Configure individual utilities
+      - **Quick Access** - Toggle utilities on/off
+      - **Exit** - Close PowerToys
+    </Step>
+
+    <Step title="Enable your first utility">
+      Open PowerToys Settings and try **PowerToys Run**:
+      
+      1. Navigate to **PowerToys Run** in the left sidebar
+      2. Toggle **Enable PowerToys Run** to On
+      3. Press `Alt + Space` to launch the quick launcher
+      4. Type an app name, file path, or command to search
+      
+      <Tip>
+        PowerToys Run is like Spotlight for Windows - it searches apps, files, settings, and more.
+      </Tip>
+    </Step>
+
+    <Step title="Explore more utilities">
+      PowerToys includes 25+ utilities for different workflows:
+      - **FancyZones** - Create custom window layouts
+      - **Color Picker** - Pick colors from anywhere on screen
+      - **PowerRename** - Bulk rename files with regex
+      - **File Locksmith** - See which processes are using a file
+      
+      Browse the full list in the [utilities documentation](/utilities/advanced-paste).
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Explore by category
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Find the right utility for your workflow
+  </p>
+
+  <CardGroup cols={3}>
+    <Card title="Window Management" icon="grid" href="/utilities/fancyzones">
+      Create custom window layouts and snap zones with FancyZones
+    </Card>
+    <Card title="File Operations" icon="file" href="/utilities/powerrename">
+      Bulk rename, resize images, and manage file locks
+    </Card>
+    <Card title="Quick Launcher" icon="rocket" href="/utilities/powertoys-run">
+      Launch apps, search files, and run commands instantly
+    </Card>
+    <Card title="Color Tools" icon="palette" href="/utilities/color-picker">
+      Pick colors from screen and manage your color palette
+    </Card>
+    <Card title="Keyboard Shortcuts" icon="keyboard" href="/utilities/keyboard-manager">
+      Remap keys and create custom shortcuts
+    </Card>
+    <Card title="Mouse Utilities" icon="computer-mouse" href="/utilities/find-my-mouse">
+      Find your mouse, highlight clicks, and jump across monitors
+    </Card>
+    <Card title="Clipboard & Paste" icon="clipboard" href="/utilities/advanced-paste">
+      Enhanced clipboard with AI-powered transformations
+    </Card>
+    <Card title="Text Extraction" icon="text" href="/utilities/text-extractor">
+      Extract text from images using OCR
+    </Card>
+    <Card title="Screen Tools" icon="desktop" href="/utilities/screen-ruler">
+      Measure pixels, zoom, and annotate with ZoomIt
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Popular utilities
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Most widely used PowerToys features
+  </p>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <a href="/utilities/fancyzones" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#0078D4] dark:hover:border-[#0078D4] overflow-hidden no-underline transition-colors">
+      <div className="h-48 bg-gradient-to-br from-[#0078D4]/10 to-[#0063B1]/10 dark:from-[#0078D4]/20 dark:to-[#0063B1]/20 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#0078D4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">FancyZones</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Create custom window layouts and organize your workspace efficiently
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#0078D4] group-hover:text-[#0063B1]">
+          Learn more
+          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a href="/utilities/powertoys-run" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#0078D4] dark:hover:border-[#0078D4] overflow-hidden no-underline transition-colors">
+      <div className="h-48 bg-gradient-to-br from-[#50E6FF]/10 to-[#0078D4]/10 dark:from-[#50E6FF]/20 dark:to-[#0078D4]/20 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#0078D4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">PowerToys Run</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Quick launcher for apps, files, and commands with plugin extensibility
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#0078D4] group-hover:text-[#0063B1]">
+          Learn more
+          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a href="/utilities/powerrename" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#0078D4] dark:hover:border-[#0078D4] overflow-hidden no-underline transition-colors">
+      <div className="h-48 bg-gradient-to-br from-[#0063B1]/10 to-[#004E8C]/10 dark:from-[#0063B1]/20 dark:to-[#004E8C]/20 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#0078D4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">PowerRename</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Bulk rename files with search and replace, including regex support
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#0078D4] group-hover:text-[#0063B1]">
+          Learn more
+          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a href="/utilities/color-picker" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#0078D4] dark:hover:border-[#0078D4] overflow-hidden no-underline transition-colors">
+      <div className="h-48 bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#0078D4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">Color Picker</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Pick colors from anywhere on screen and copy in multiple formats
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#0078D4] group-hover:text-[#0063B1]">
+          Learn more
+          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Community and support
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Join thousands of PowerToys users and contributors
+  </p>
+
+  <CardGroup cols={2}>
+    <Card title="GitHub Discussions" icon="github" href="https://github.com/microsoft/PowerToys/discussions">
+      Ask questions, share ideas, and connect with the community
+    </Card>
+    <Card title="Report Issues" icon="bug" href="https://github.com/microsoft/PowerToys/issues">
+      Found a bug? Report it on GitHub Issues
+    </Card>
+    <Card title="Contributing Guide" icon="code-pull-request" href="/community/contributing">
+      Learn how to contribute code, documentation, or translations
+    </Card>
+    <Card title="FAQ & Troubleshooting" icon="circle-question" href="/community/faq">
+      Common questions and solutions to known issues
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-br from-[#0078D4] to-[#0063B1] dark:from-[#0063B1] dark:to-[#004E8C] p-8 sm:p-12 text-center">
+    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+      Ready to supercharge your Windows experience?
+    </h2>
+    <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
+      Install PowerToys today and discover how these utilities can streamline your daily workflow.
+    </p>
+    <a 
+      href="/installation" 
+      className="inline-flex items-center px-6 py-3 bg-white text-[#0078D4] font-semibold rounded-lg hover:bg-white/90 transition-colors"
+    >
+      Install PowerToys
+      <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </a>
+  </div>
+</div>

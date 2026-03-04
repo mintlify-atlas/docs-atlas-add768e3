@@ -1,80 +1,647 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Quick Start Guide'
+description: 'Get started with Microsoft PowerToys - learn the essential utilities, keyboard shortcuts, and configuration options to boost your Windows productivity'
 ---
 
-## Get started in three steps
+# Getting Started with PowerToys
 
-Get your documentation site running locally and make your first customization.
+Welcome to Microsoft PowerToys! This guide will walk you through the most essential utilities and get you productive in minutes.
 
-### Step 1: Set up your local environment
+<Info>
+Make sure you've [installed PowerToys](/installation) before continuing with this guide.
+</Info>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## First Launch
+
+After installing PowerToys, you'll see the PowerToys icon in your system tray (near the clock). Click it to access:
+
+- **Settings**: Configure all PowerToys utilities
+- **Quick Access**: Quick toggle for utilities
+- **Documentation**: Links to help resources
+- **Check for updates**: Manually check for new versions
+- **Exit**: Close PowerToys completely
+
+<Tip>
+Right-click the PowerToys tray icon to access these options quickly. The icon adapts to your Windows theme (light/dark mode).
+</Tip>
+
+## Essential Utility #1: PowerToys Run
+
+PowerToys Run is a quick launcher that helps you search and launch applications, files, and perform quick calculations instantly.
+
+### Activating PowerToys Run
+
+The default keyboard shortcut is:
+
+**`Alt + Space`**
+
+<Steps>
+  <Step title="Press Alt + Space">
+    Press and hold the `Alt` key, then press the `Space` key. The PowerToys Run window appears in the center of your screen.
+  </Step>
+  
+  <Step title="Start Typing">
+    Start typing the name of an application, file, or command. Results appear instantly as you type.
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    **Try it now**: Press `Alt + Space`, type "notepad", and press Enter to launch Notepad.
+  </Step>
+  
+  <Step title="Navigate Results">
+    Use the arrow keys (↑/↓) to navigate through results, or use your mouse to click on any result.
+  </Step>
+  
+  <Step title="Press Enter to Launch">
+    Press Enter to launch the selected application or open the selected file.
+  </Step>
+</Steps>
 
-### Step 2: Deploy your changes
+### PowerToys Run Features
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+PowerToys Run includes powerful plugins that extend its functionality:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+#### Quick Calculator
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Perform calculations directly in PowerToys Run:
 
-### Step 3: Go live
+<CodeGroup>
+```text Basic Math
+Alt + Space, then type:
+= 45 * 12
+= sqrt(144)
+= 2^10
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```text Unit Conversion
+Alt + Space, then type:
+100 USD to EUR
+5 miles to km
+32 fahrenheit to celsius
+```
+</CodeGroup>
 
-## Next steps
+#### Application Launcher
 
-Now that you have your docs running, explore these key features:
+Quickly find and launch any installed application:
 
-<CardGroup cols={2}>
+```text
+Alt + Space, then type:
+chrome
+visual studio
+outlook
+```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+PowerToys Run searches through:
+- Start menu shortcuts
+- Desktop shortcuts  
+- Recently used applications
+- Windows Store apps
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+#### File Search
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+Find files and folders on your system:
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+```text
+Alt + Space, then type:
+report.pdf
+pictures
+documents
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+For best file search results, ensure Windows Search indexing is enabled for the folders you want to search.
 </Note>
+
+#### System Commands
+
+Execute Windows commands directly:
+
+```text System Commands
+Alt + Space, then type:
+shutdown
+restart
+sleep
+lock
+empty recycle bin
+```
+
+#### Web Search
+
+Search the web directly from PowerToys Run:
+
+```text
+Alt + Space, then type:
+?? weather forecast
+?? latest news
+?? python tutorial
+```
+
+The `??` prefix triggers web search in your default browser.
+
+### Customizing PowerToys Run
+
+<Steps>
+  <Step title="Open Settings">
+    Click the PowerToys tray icon, then click "Settings". Navigate to "PowerToys Run" in the left sidebar.
+  </Step>
+  
+  <Step title="Change Activation Shortcut">
+    Click the hotkey field next to "Activation shortcut" and press your desired key combination. 
+    
+    Popular alternatives:
+    - `Win + Space` (conflicts with language switcher on some systems)
+    - `Ctrl + Space`
+    - `Win + Q`
+    
+    <Warning>
+    Avoid shortcuts that conflict with system functions or other applications you frequently use.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure Plugins">
+    Scroll down to the "Plugins" section. Each plugin can be:
+    - Enabled/disabled with the toggle switch
+    - Configured with the gear icon
+    - Assigned a direct activation keyword
+  </Step>
+  
+  <Step title="Adjust Search Behavior">
+    Configure search options:
+    - **Search query delay**: Time before search results appear (default: 150ms)
+    - **Maximum results**: How many results to show (default: 4)
+    - **Clear previous query on launch**: Start fresh each time
+  </Step>
+</Steps>
+
+## Essential Utility #2: FancyZones
+
+FancyZones is a window manager that helps you organize windows into custom layouts for maximum productivity.
+
+### Quick Setup
+
+<Steps>
+  <Step title="Enable FancyZones">
+    Open PowerToys Settings > FancyZones. Ensure the toggle at the top is **On**.
+  </Step>
+  
+  <Step title="Launch Editor">
+    Click "Launch layout editor" or press `Win + Shift + \` (backslash) to open the FancyZones editor.
+  </Step>
+  
+  <Step title="Choose a Template">
+    Select from pre-built templates:
+    - **Focus**: Single large zone with smaller zones on the side
+    - **Columns**: Vertical columns (2, 3, or 4 columns)
+    - **Rows**: Horizontal rows
+    - **Grid**: Uniform grid layout
+    - **Priority Grid**: Grid with one larger priority zone
+    
+    Click "Apply" to activate your chosen layout.
+  </Step>
+  
+  <Step title="Test Your Layout">
+    Drag any window while holding `Shift`. You'll see the zone layout overlay. Drop the window into a zone to snap it.
+  </Step>
+</Steps>
+
+### Using FancyZones
+
+#### Snap Windows to Zones
+
+**Method 1: Drag with Shift**
+1. Hold down the `Shift` key
+2. Click and drag a window's title bar
+3. The zone layout appears as an overlay
+4. Drop the window into any zone to snap it
+
+**Method 2: Keyboard Shortcuts**
+- `Win + Left/Right Arrow`: Snap to adjacent zone
+- `Win + Up/Down Arrow`: Snap to zone above/below
+
+#### Span Across Multiple Zones
+
+Hold `Ctrl` while dropping a window to span multiple zones:
+
+1. Hold `Shift` and start dragging a window
+2. Move over the first zone you want to span
+3. Hold `Ctrl` (keep holding `Shift` too)
+4. Move over additional zones to include them
+5. Release to snap across all selected zones
+
+### FancyZones Configuration
+
+<CodeGroup>
+```text Zone Appearance
+Settings > FancyZones > Appearance:
+- Show zones while dragging windows: On
+- Show zones on all monitors: On  
+- Zone highlight color: Choose your color
+- Zone opacity: 50% (default)
+```
+
+```text Zone Behavior  
+Settings > FancyZones > Behavior:
+- Hold Shift to activate zones: On (recommended)
+- Move newly created windows to last known zone: On
+- Keep windows in zones when resolution changes: On
+- During zone layout changes, windows assigned to a zone match new size/position: On
+```
+</CodeGroup>
+
+<Tip>
+**Pro tip**: Create different zone layouts for different tasks. Press `Win + Shift + \` to quickly switch between layouts you've created.
+</Tip>
+
+## Essential Utility #3: Color Picker
+
+Quickly pick colors from anywhere on your screen and copy them in various formats.
+
+### Activation
+
+Default keyboard shortcut: **`Win + Shift + C`**
+
+<Steps>
+  <Step title="Activate Color Picker">
+    Press `Win + Shift + C`. Your screen will be overlaid with a magnified view of the cursor area.
+  </Step>
+  
+  <Step title="Select Color">
+    Move your mouse to hover over any pixel. The color information appears in the magnified view.
+    
+    Click to select the color, or press `Esc` to cancel.
+  </Step>
+  
+  <Step title="Color Copied">
+    The color value is automatically copied to your clipboard in your preferred format (HEX, RGB, HSL, etc.).
+    
+    A notification confirms which format was copied.
+  </Step>
+</Steps>
+
+### Color Picker Configuration
+
+<Steps>
+  <Step title="Choose Default Format">
+    Settings > Color Picker > "Activation behavior"
+    
+    Select your preferred color format:
+    - **HEX** (e.g., `#FF5733`) - Most common for web/design
+    - **RGB** (e.g., `rgb(255, 87, 51)`) - Web CSS format
+    - **HSL** (e.g., `hsl(12, 100%, 60%)`) - Hue, saturation, lightness
+    - **HSV** (e.g., `hsv(12, 80%, 100%)`) - Hue, saturation, value
+    - **CMYK** (e.g., `cmyk(0%, 66%, 80%, 0%)`) - Print format
+    - **HSB** (e.g., `hsb(12, 80%, 100%)`) - Photoshop format
+  </Step>
+  
+  <Step title="Enable Color History">
+    Turn on "Show color history" to keep a list of your recently picked colors.
+    
+    Access history: After picking a color, the Color Picker editor window appears showing your history.
+  </Step>
+  
+  <Step title="Change Activation Shortcut">
+    Click the activation shortcut field and press your preferred key combination.
+    
+    Popular alternatives:
+    - `Ctrl + Shift + C`
+    - `Alt + C`
+  </Step>
+</Steps>
+
+### Using Color History
+
+After picking colors, access your color history:
+
+1. The Color Picker editor window opens automatically (if enabled)
+2. View all recently picked colors
+3. Click any color to copy it again
+4. Click the format dropdown to copy in a different format
+5. Remove colors from history with the trash icon
+
+<Note>
+Color history persists across PowerToys sessions and stores up to 20 colors by default.
+</Note>
+
+## Essential Utility #4: PowerRename
+
+Batch rename multiple files using search and replace with regular expressions.
+
+### Accessing PowerRename
+
+PowerRename integrates directly into File Explorer:
+
+<Steps>
+  <Step title="Select Files">
+    In File Explorer, select one or more files you want to rename.
+  </Step>
+  
+  <Step title="Right-Click Menu">
+    Right-click on the selected files and choose "PowerRename" from the context menu.
+    
+    (On Windows 11, you may need to click "Show more options" first)
+  </Step>
+  
+  <Step title="PowerRename Window Opens">
+    The PowerRename window appears, showing all selected files and a preview of changes.
+  </Step>
+</Steps>
+
+### Basic Renaming
+
+<CodeGroup>
+```text Simple Replace
+Search for: vacation
+Replace with: holiday
+
+Original: vacation_2024_photo1.jpg
+Renamed: holiday_2024_photo1.jpg
+```
+
+```text Add Prefix
+Search for: (leave empty)
+Replace with: Project_
+
+Original: document.pdf
+Renamed: Project_document.pdf
+```
+
+```text Remove Text
+Search for: _old
+Replace with: (leave empty)
+
+Original: report_old.docx  
+Renamed: report.docx
+```
+</CodeGroup>
+
+### Advanced Renaming with Regex
+
+Enable "Use regular expressions" for powerful pattern matching:
+
+<CodeGroup>
+```text Add Numbers
+Search for: (.*)
+Replace with: $1_001
+Enable: Use regular expressions
+
+Original: photo.jpg
+Renamed: photo_001.jpg
+```
+
+```text Reorder Parts
+Search for: (\d{4})-(\d{2})-(\d{2})
+Replace with: $2-$3-$1
+Enable: Use regular expressions
+
+Original: 2024-03-15_notes.txt
+Renamed: 03-15-2024_notes.txt
+```
+
+```text Remove Numbers
+Search for: \d+
+Replace with: (leave empty)
+Enable: Use regular expressions
+
+Original: document123.txt
+Renamed: document.txt
+```
+</CodeGroup>
+
+### PowerRename Options
+
+Configure rename behavior with checkboxes:
+
+- **Match all occurrences**: Replace every instance in the filename
+- **Case sensitive**: Distinguish between upper/lowercase
+- **Use regular expressions**: Enable regex pattern matching
+- **Apply to**: Choose files only, folders only, or both
+- **Exclude items**: Specify files to skip
+- **Enumerate items**: Add sequential numbers to renamed files
+
+<Warning>
+Always review the preview before clicking "Rename". PowerRename shows exactly how each file will be renamed, with changes highlighted.
+</Warning>
+
+### PowerRename Configuration
+
+<Steps>
+  <Step title="Open Settings">
+    PowerToys Settings > PowerRename
+  </Step>
+  
+  <Step title="Configure Defaults">
+    Set default options that apply each time you use PowerRename:
+    - Auto-complete search/replace fields from history
+    - Maximum number of items in MRU (Most Recently Used) list
+    - Show PowerRename icon in context menu
+  </Step>
+  
+  <Step title="Enable Extended Menu">
+    For Windows 11 users: Toggle "Show PowerRename in extended context menu" to make it appear in the main right-click menu (without "Show more options").
+  </Step>
+</Steps>
+
+## Additional Utilities to Explore
+
+Now that you're familiar with the core utilities, explore these powerful tools:
+
+### Quick Access Tools
+
+| Utility | Shortcut | Description |
+|---------|----------|-------------|
+| **Text Extractor** | `Win + Shift + T` | Extract text from images using OCR |
+| **Shortcut Guide** | Hold `Win` key (1 second) | Display Windows keyboard shortcuts overlay |
+| **Always on Top** | `Win + Ctrl + T` | Pin any window to stay on top |
+| **Screen Ruler** | `Win + Shift + M` | Measure pixels on your screen |
+
+### File Explorer Enhancements
+
+- **Peek**: Press `Ctrl + Space` in File Explorer to preview files
+- **File Locksmith**: Right-click a file > "What's using this file?" to see what's locking it
+- **Image Resizer**: Right-click images > "Resize pictures" for batch resizing
+- **File Explorer Add-ons**: Preview SVG, PDF, and more in File Explorer
+
+### Keyboard & Mouse Tools
+
+- **Keyboard Manager**: Remap keys and create custom shortcuts
+- **Mouse Utilities**: Find your mouse, highlight clicks, and more
+- **Quick Accent**: Press and hold a letter key (e.g., `e`) to add accents (é, è, ê, ë)
+
+<Tip>
+Enable only the utilities you need. Keeping unused utilities disabled reduces resource usage and keeps your system running smoothly.
+</Tip>
+
+## Customizing Global Settings
+
+### General Settings
+
+Access global PowerToys settings:
+
+<Steps>
+  <Step title="Open General Settings">
+    PowerToys Settings > General
+  </Step>
+  
+  <Step title="Startup Behavior">
+    Configure:
+    - **Run at startup**: Launch PowerToys when Windows starts (recommended)
+    - **Run as administrator**: Some utilities require this for full functionality
+  </Step>
+  
+  <Step title="Theme Settings">
+    Choose your interface theme:
+    - **Light**: Light mode interface
+    - **Dark**: Dark mode interface  
+    - **System**: Match Windows theme automatically
+  </Step>
+  
+  <Step title="Update Settings">
+    Configure automatic updates:
+    - **Automatically download updates**: Get new versions automatically
+    - **Show notification when updates are available**: Alert you to new releases
+  </Step>
+</Steps>
+
+### Backup and Restore Settings
+
+Your PowerToys configuration is stored in JSON files:
+
+**Settings location**:
+- Per-user install: `%LOCALAPPDATA%\Microsoft\PowerToys\settings`
+- Machine-wide install: `C:\Program Files\PowerToys\settings`
+
+To backup your configuration:
+1. Close PowerToys completely
+2. Copy the entire `settings` folder to a backup location
+3. To restore, replace the settings folder and restart PowerToys
+
+<Info>
+Settings are not automatically synced across devices. Use manual backup/restore or enterprise GPO for multi-device configurations.
+</Info>
+
+## Keyboard Shortcut Reference
+
+Quick reference of default keyboard shortcuts:
+
+| Utility | Default Shortcut | Action |
+|---------|-----------------|--------|
+| PowerToys Run | `Alt + Space` | Open quick launcher |
+| FancyZones Editor | `Win + Shift + \` | Open layout editor |
+| FancyZones Snap | Hold `Shift` while dragging | Activate zone snapping |
+| Color Picker | `Win + Shift + C` | Pick color from screen |
+| Text Extractor | `Win + Shift + T` | Extract text with OCR |
+| Shortcut Guide | Hold `Win` (1 sec) | Show Windows shortcuts |
+| Always on Top | `Win + Ctrl + T` | Pin window on top |
+| Screen Ruler | `Win + Shift + M` | Measure screen elements |
+| Peek | `Ctrl + Space` (in Explorer) | Preview file |
+
+<Warning>
+All keyboard shortcuts can be customized in PowerToys Settings. If a shortcut doesn't work, check for conflicts with other applications.
+</Warning>
+
+## Tips for Power Users
+
+### Productivity Workflows
+
+**Workflow 1: Developer Setup**
+1. Use FancyZones with a 3-column layout: Code editor (center), terminal (right), browser (left)
+2. Configure PowerToys Run plugins: Calculator, System commands, Windows Terminal
+3. Use Color Picker for design token extraction
+4. Enable File Locksmith for debugging file locks
+
+**Workflow 2: Content Creation**
+1. Use FancyZones with Focus layout: Main app (large zone), reference materials (small zones)
+2. Use Color Picker to extract brand colors from references
+3. Use Image Resizer for batch processing assets
+4. Use PowerRename for organizing exported files
+
+**Workflow 3: Data Analysis**
+1. FancyZones grid layout: Spreadsheet, database tool, documentation
+2. PowerToys Run calculator plugin for quick calculations
+3. Text Extractor for grabbing data from PDFs/images
+4. Always on Top for keeping reference windows visible
+
+### Performance Optimization
+
+<Steps>
+  <Step title="Disable Unused Utilities">
+    Only keep enabled the utilities you actually use. Each utility consumes some system resources.
+  </Step>
+  
+  <Step title="Adjust Search Delays">
+    In PowerToys Run settings, increase "Search input delay" if you notice lag on slower systems.
+  </Step>
+  
+  <Step title="Limit FancyZones Effects">
+    Reduce zone opacity and disable animations if you experience performance issues with window snapping.
+  </Step>
+  
+  <Step title="Configure Startup">
+    If PowerToys slows down startup, consider disabling "Run at startup" and launching it manually when needed.
+  </Step>
+</Steps>
+
+## Troubleshooting Common Issues
+
+### PowerToys Run Not Appearing
+
+1. Check if the hotkey conflicts with another app
+2. Try changing the activation shortcut in Settings
+3. Ensure PowerToys is running (check system tray)
+4. Restart PowerToys
+
+### FancyZones Not Showing Zones
+
+1. Ensure "Show zones while dragging windows" is enabled
+2. Check if you're holding the Shift key while dragging (if that option is enabled)
+3. Verify a layout is applied to your current monitor
+4. Try pressing `Win + Shift + \` to launch the editor and re-apply your layout
+
+### Context Menu Items Missing
+
+1. Restart Windows Explorer (Task Manager > Windows Explorer > Restart)
+2. Check if the utility is enabled in PowerToys Settings
+3. On Windows 11, check if items are in the "Show more options" submenu
+4. Re-enable the utility (disable, apply, enable, apply)
+
+### Keyboard Shortcuts Not Working
+
+1. Check for conflicts with other applications
+2. Ensure PowerToys is running
+3. Try running PowerToys as administrator (some apps require this)
+4. Verify the shortcut is correctly configured in Settings
+
+<Info>
+For detailed troubleshooting and additional help, visit the [PowerToys GitHub Issues](https://github.com/microsoft/PowerToys/issues) or [Microsoft Learn documentation](https://learn.microsoft.com/windows/powertoys/).
+</Info>
+
+## Next Steps
+
+You're now ready to use PowerToys! Continue learning:
+
+- **[Explore All Utilities](/utilities/overview)**: Discover all 25+ PowerToys utilities in detail
+- **[Configuration Guide](/configuration/overview)**: Advanced configuration and customization
+- **[Keyboard Manager](/utilities/keyboard-manager)**: Create custom keyboard remappings
+- **[Group Policy](/configuration/gpo)**: Enterprise deployment and management
+
+## Getting Help and Contributing
+
+### Community Resources
+
+- **GitHub Issues**: [Report bugs and request features](https://github.com/microsoft/PowerToys/issues)
+- **GitHub Discussions**: [Ask questions and share tips](https://github.com/microsoft/PowerToys/discussions)  
+- **Documentation**: [Microsoft Learn](https://learn.microsoft.com/windows/powertoys/)
+- **Blog**: [Release notes and announcements](https://aka.ms/powertoys-releaseblog)
+
+### Contributing
+
+PowerToys is open source! Contribute by:
+- Reporting bugs and requesting features
+- Improving documentation
+- Writing code for new features or bug fixes
+- Creating third-party plugins for PowerToys Run
+
+Visit the [Contributing Guide](https://github.com/microsoft/PowerToys/blob/main/CONTRIBUTING.md) to get started.
+
+<Tip>
+PowerToys is actively developed with monthly releases. Check for updates regularly to get the latest features and improvements!
+</Tip>

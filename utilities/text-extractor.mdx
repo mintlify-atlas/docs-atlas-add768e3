@@ -1,0 +1,483 @@
+---
+title: Text Extractor
+description: Extract text from anywhere on your screen using OCR (Optical Character Recognition) technology.
+---
+
+Text Extractor (PowerOCR) uses Windows OCR to extract text from any region of your screen. Copy text from images, videos, dialogs, or any application where text selection isn't possible.
+
+## Activation
+
+<Steps>
+  <Step title="Activate OCR Mode">
+    Press `Win + Shift + T` to activate Text Extractor.
+  </Step>
+  <Step title="Select Region">
+    Click and drag to select the screen region containing text.
+  </Step>
+  <Step title="Extract Text">
+    Release mouse button - text is automatically extracted and copied to clipboard.
+  </Step>
+  <Step title="Paste Text">
+    Press `Ctrl + V` to paste the extracted text anywhere.
+  </Step>
+</Steps>
+
+<Note>
+  Customize the activation shortcut in PowerToys Settings > Text Extractor.
+</Note>
+
+## OCR Technology
+
+### Windows OCR Engine
+
+Text Extractor uses Windows' built-in OCR engine (Windows.Media.Ocr) for text recognition.
+
+From source `/src/modules/PowerOCR/PowerOCR/Helpers/OcrExtensions.cs:90-106`:
+
+<CodeGroup>
+```csharp OCR Implementation
+internal static async Task<OcrResult> GetOcrResultFromImageAsync(Bitmap bmp, Language language)
+{
+    await using MemoryStream memoryStream = new();
+    using WrappingStream wrappingStream = new(memoryStream);
+    
+    bmp.Save(wrappingStream, ImageFormat.Bmp);
+    wrappingStream.Position = 0;
+    
+    BitmapDecoder bmpDecoder = await BitmapDecoder.CreateAsync(wrappingStream.AsRandomAccessStream());
+    SoftwareBitmap softwareBmp = await bmpDecoder.GetSoftwareBitmapAsync();
+    
+    OcrEngine ocrEngine = OcrEngine.TryCreateFromLanguage(language);
+    return await ocrEngine.RecognizeAsync(softwareBmp);
+}
+```
+</CodeGroup>
+
+### Supported Languages
+
+Text Extractor supports all languages installed in Windows:
+
+<Accordion title="Language Support">
+  OCR works with:
+  
+  - **Latin scripts:** English, Spanish, French, German, Italian, Portuguese, etc.
+  - **Cyrillic scripts:** Russian, Ukrainian, Serbian, Bulgarian, etc.
+  - **Asian languages:** Chinese (Simplified & Traditional), Japanese, Korean
+  - **Other scripts:** Arabic, Hebrew, Greek, Thai, etc.
+  
+  **Note:** Language must be installed in Windows Settings > Time & Language > Language.
+</Accordion>
+
+From source `/src/modules/PowerOCR/PowerOCR/Helpers/LanguageHelper.cs`
+
+## Features
+
+### Text Recognition Modes
+
+<Tabs>
+  <Tab title="Standard OCR">
+    Default mode extracts text line-by-line:
+    
+    - Preserves line breaks
+    - Maintains text order
+    - Handles multi-line paragraphs
+    - Good for most text extraction
+  </Tab>
+  
+  <Tab title="Table Mode">
+    Extracts text organized in tables:
+    
+    - Detects table structure
+    - Preserves column alignment
+    - Maintains row/column relationships
+    - Useful for spreadsheets and data
+    
+    Implementation: `/src/modules/PowerOCR/PowerOCR/Helpers/OcrExtensions.cs:66-88`
+  </Tab>
+</Tabs>
+
+### Language-Aware Text Processing
+
+Text Extractor intelligently handles different language types:
+
+<Accordion title="Space-Joining Languages">
+  From source `/src/modules/PowerOCR/PowerOCR/Helpers/OcrExtensions.cs:25-64`:
+  
+  **Space-joining languages** (English, Spanish, etc.):
+  - Automatically add spaces between words
+  - Preserve word boundaries
+  - Handle punctuation correctly
+  
+  **Non-space-joining languages** (Chinese, Japanese):
+  - No automatic spacing between characters
+  - Detect when to insert spaces (for mixed content)
+  - Handle CJK characters as single-character words
+  
+  <CodeGroup>
+  ```csharp Language Detection
+  bool isSpaceJoiningOCRLang = LanguageHelper.IsLanguageSpaceJoining(language);
+  
+  if (isSpaceJoiningOCRLang) {
+      text.AppendLine(ocrLine.Text);
+  } else {
+      // Complex logic to handle CJK + Latin mixed text
+      Regex regexSpaceJoiningWord = new(@"(^[\p{L}-[\p{Lo}]]|\p{Nd}$)|.{2,}");
+      // Insert spaces only where appropriate
+  }
+  ```
+  </CodeGroup>
+</Accordion>
+
+### Image Scaling
+
+Automatic image scaling for better OCR accuracy:
+
+<CodeGroup>
+```csharp Image Scaling
+bool scaleBMP = true;
+
+if (bmp.Width * 1.5 > OcrEngine.MaxImageDimension) {
+    scaleBMP = false;  // Image already large enough
+}
+
+// Scale to 1.5x for better recognition (if within limits)
+using Bitmap scaledBitmap = scaleBMP ? 
+    ImageMethods.ScaleBitmapUniform(bmp, 1.5) : 
+    ImageMethods.ScaleBitmapUniform(bmp, 1.0);
+```
+</CodeGroup>
+
+From `/src/modules/PowerOCR/PowerOCR/Helpers/OcrExtensions.cs:75-82`
+
+<Tip>
+  Text Extractor automatically scales images up to 1.5x for improved OCR accuracy while respecting the OCR engine's maximum dimension limit.
+</Tip>
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Copy Text from Images" icon="image">
+    Extract text from screenshots, photos, scanned documents, or any image with text.
+  </Card>
+  
+  <Card title="Extract from Videos" icon="video">
+    Capture text from paused video frames, subtitles, or video overlays.
+  </Card>
+  
+  <Card title="Legacy Applications" icon="window-restore">
+    Copy text from applications that don't support text selection or copying.
+  </Card>
+  
+  <Card title="Error Messages" icon="triangle-exclamation">
+    Capture and share error messages from dialog boxes or system alerts.
+  </Card>
+</CardGroup>
+
+<AccordionGroup>
+  <Accordion title="Development Workflows">
+    **Extract Code from Screenshots:**
+    - Copy code from tutorial screenshots
+    - Extract code from Stack Overflow images
+    - Capture configuration examples from documentation
+    - Get code from video tutorials
+    
+    **Example:** Extract SQL query from database tool screenshot.
+  </Accordion>
+  
+  <Accordion title="Data Entry">
+    **Digitize Printed/Handwritten Text:**
+    - Extract text from scanned forms
+    - Digitize business cards
+    - Copy data from PDF images
+    - Extract information from screenshots
+    
+    **Example:** Extract address from scanned invoice image.
+  </Accordion>
+  
+  <Accordion title="Research & Documentation">
+    **Capture Reference Information:**
+    - Extract quotes from e-books (images)
+    - Copy data from research papers (PDFs)
+    - Capture table data from reports
+    - Save information from presentations
+    
+    **Example:** Extract table of statistics from presentation slide.
+  </Accordion>
+  
+  <Accordion title="Accessibility">
+    **Text-to-Speech Support:**
+    - Extract text for screen readers
+    - Copy text from inaccessible interfaces
+    - Get text from images for translation
+    - Support users with visual impairments
+    
+    **Example:** Extract text from image to read with text-to-speech.
+  </Accordion>
+  
+  <Accordion title="Translation">
+    **Multilingual Text Extraction:**
+    - Extract foreign language text from images
+    - Copy text for translation services
+    - Capture text from international websites
+    - Get text from foreign language videos
+    
+    **Example:** Extract Japanese text from game screenshot for translation.
+  </Accordion>
+</AccordionGroup>
+
+## Configuration
+
+### Activation Shortcut
+
+<Steps>
+  <Step title="Open Settings">
+    Open PowerToys Settings > Text Extractor.
+  </Step>
+  <Step title="Change Shortcut">
+    Click activation shortcut field and press your desired key combination (default: `Win + Shift + T`).
+  </Step>
+  <Step title="Test">
+    Use new shortcut to verify it works.
+  </Step>
+</Steps>
+
+### OCR Language
+
+Select the language for text recognition:
+
+<Steps>
+  <Step title="Set Primary Language">
+    Choose the language most commonly used in text you extract.
+  </Step>
+  <Step title="Add Languages">
+    Install additional OCR languages in Windows Settings if needed:
+    
+    Settings > Time & Language > Language > Add a language
+  </Step>
+  <Step title="Switch Languages">
+    Change language in Text Extractor settings before extracting text in different language.
+  </Step>
+</Steps>
+
+<Warning>
+  OCR accuracy depends on selecting the correct language. Using English OCR on Chinese text will produce poor results.
+</Warning>
+
+### Display Options
+
+- Cursor style during selection
+- Overlay color and opacity
+- Selection border appearance
+- Result preview window
+
+## Advanced Features
+
+### Table Recognition
+
+Extract structured table data as formatted text:
+
+<CodeGroup>
+```csharp Table Extraction
+public static async Task<string> GetRegionsTextAsTableAsync(
+    OCROverlay passedWindow, 
+    Rectangle regionScaled, 
+    Language? language)
+{
+    // Extract text
+    OcrResult ocrResult = await GetOcrResultFromImageAsync(scaledBitmap, language);
+    
+    // Parse into table structure
+    List<WordBorder> wordBorders = ResultTable.ParseOcrResultIntoWordBorders(
+        ocrResult, dpiScale);
+    
+    // Format as table
+    return ResultTable.GetWordsAsTable(
+        wordBorders, dpiScale, isSpaceJoiningLang);
+}
+```
+</CodeGroup>
+
+From `/src/modules/PowerOCR/PowerOCR/Helpers/OcrExtensions.cs:66-88`
+
+### DPI-Aware Selection
+
+Text Extractor is DPI-aware for accurate region selection on high-DPI displays:
+
+```csharp
+DpiScale dpiScale = VisualTreeHelper.GetDpi(passedWindow);
+```
+
+Ensures pixel-perfect selection on 4K monitors and mixed-DPI setups.
+
+### Image Processing Helpers
+
+Utility functions for image manipulation:
+
+Implementation: `/src/modules/PowerOCR/PowerOCR/Helpers/ImageMethods.cs`
+
+- Bitmap scaling and uniform resizing
+- Region capture from screen
+- DPI-aware coordinate conversion
+- Image format conversion
+
+### Cursor Management
+
+During text selection, cursor is confined to prevent accidental clicks outside overlay:
+
+Implementation: `/src/modules/PowerOCR/PowerOCR/Helpers/CursorClipper.cs`
+
+### String Processing
+
+Post-processing for extracted text:
+
+Implementation: `/src/modules/PowerOCR/PowerOCR/Helpers/StringHelpers.cs`
+
+- Whitespace normalization
+- Line break handling
+- Special character cleanup
+- Format preservation
+
+## OCR Accuracy Tips
+
+<AccordionGroup>
+  <Accordion title="Improve Recognition Quality">
+    **Best Practices:**
+    
+    1. **Select tightly around text** - Minimize background and non-text areas
+    2. **Use high-resolution sources** - Zoom in or use higher quality images
+    3. **Ensure good contrast** - Dark text on light background (or vice versa)
+    4. **Avoid distorted text** - Skewed or rotated text reduces accuracy
+    5. **Select correct language** - Match OCR language to text language
+    6. **Clean text areas** - Remove visual noise or overlapping elements
+  </Accordion>
+  
+  <Accordion title="Handle Difficult Text">
+    **Challenging Scenarios:**
+    
+    - **Small text:** Zoom in or scale up the window before capturing
+    - **Stylized fonts:** Simple fonts work better than decorative ones
+    - **Backgrounds:** Solid backgrounds better than textured/busy ones
+    - **Mixed languages:** Extract each language separately with correct language setting
+    - **Handwriting:** Printed text works better; handwriting recognition is limited
+  </Accordion>
+  
+  <Accordion title="Post-Processing**">
+    After extraction:
+    
+    1. Review extracted text for errors
+    2. Correct misrecognized characters (common: O/0, I/l/1, S/5)
+    3. Fix spacing issues in mixed-language text
+    4. Preserve original formatting where needed
+    5. Use spell-check to catch obvious errors
+  </Accordion>
+</AccordionGroup>
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win + Shift + T` | Activate Text Extractor (default) |
+| `Esc` | Cancel text extraction |
+| `Click + Drag` | Select region to extract |
+| `Ctrl + V` | Paste extracted text |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Text Extractor Not Activating">
+    **Checklist:**
+    - Ensure Text Extractor is enabled in PowerToys Settings
+    - Verify activation shortcut isn't conflicting
+    - Check PowerToys is running
+    - Restart PowerToys if needed
+    
+    **Common conflicts:** Some applications use `Win + Shift + T` - choose different shortcut.
+  </Accordion>
+  
+  <Accordion title="Poor OCR Accuracy">
+    **Troubleshooting:**
+    - Verify correct language is selected
+    - Check text is clear and readable
+    - Ensure sufficient contrast
+    - Try zooming in on text before extraction
+    - Avoid selecting too much non-text area
+    - Check Windows OCR language pack is installed
+    
+    **Note:** OCR accuracy varies by font, size, and clarity.
+  </Accordion>
+  
+  <Accordion title="No Text Detected">
+    **Possible Causes:**
+    - Selected area contains no text
+    - Text is too small or blurry
+    - Wrong language selected
+    - Image contrast too low
+    - Text is actually rendered graphics (not characters)
+    
+    **Solution:** Try larger selection area, zoom in, or adjust image source.
+  </Accordion>
+  
+  <Accordion title="Clipboard Not Updated">
+    **Issues:**
+    - Another application may be blocking clipboard
+    - Clipboard manager interference
+    - No text was detected (check extraction was successful)
+    
+    **Fix:** Close clipboard managers temporarily, verify text was extracted.
+  </Accordion>
+  
+  <Accordion title="Language Not Available">
+    **Missing Language Pack:**
+    
+    1. Open Windows Settings
+    2. Go to Time & Language > Language
+    3. Click "Add a language"
+    4. Select desired language
+    5. Check "Optical character recognition" in optional features
+    6. Install language pack
+    7. Restart Text Extractor
+  </Accordion>
+</AccordionGroup>
+
+## Performance Considerations
+
+<Accordion title="OCR Performance">
+  **Processing Time:**
+  
+  - Small text regions: < 1 second
+  - Medium regions: 1-3 seconds
+  - Large regions: 3-10 seconds
+  - Very large regions: May timeout or fail
+  
+  **Recommendations:**
+  
+  - Select only necessary text areas
+  - Break large extractions into smaller regions
+  - Be patient with complex multi-language text
+  - Close other heavy applications during large extractions
+</Accordion>
+
+## Accessibility Features
+
+<Accordion title="Accessibility Support">
+  Text Extractor improves accessibility:
+  
+  - **Screen Reader Compatible:** Extracted text can be read by screen readers
+  - **Keyboard Navigation:** Full keyboard control during selection
+  - **High Contrast Support:** Works with Windows high contrast themes
+  - **Magnification:** Works with Windows Magnifier
+  - **Text-to-Speech:** Extract text for speech synthesis
+</Accordion>
+
+## Source Code
+
+Location: `/src/modules/PowerOCR/PowerOCR/`
+
+- OCR extensions: `Helpers/OcrExtensions.cs`
+- Language support: `Helpers/LanguageHelper.cs`
+- Image processing: `Helpers/ImageMethods.cs`
+- String utilities: `Helpers/StringHelpers.cs`
+- Cursor management: `Helpers/CursorClipper.cs`
+- Throttled actions: `Helpers/ThrottledActionInvoker.cs`
+- OS interop: `Helpers/OSInterop.cs`
+- Main application: `App.xaml.cs`

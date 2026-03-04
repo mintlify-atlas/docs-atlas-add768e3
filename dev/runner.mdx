@@ -1,0 +1,768 @@
+---
+title: PowerToys Runner
+description: Implementation details of the PowerToys Runner (PowerToys.exe)
+---
+
+## Overview
+
+The PowerToys Runner is the main executable (`PowerToys.exe`) that serves as the host process for all PowerToys modules. It manages module lifecycle, hotkey registration, the system tray icon, and communication with the Settings UI.
+
+## Core Responsibilities
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   PowerToys Runner                      │
+│                                                         │
+│  ┌───────────────────────────────────────────────┐    │
+│  │  Tray Icon & Menu                             │    │
+│  │  • Right-click menu                           │    │
+│  │  • Left-click (Quick Access Flyout)           │    │
+│  │  • Double-click (Settings Dashboard)          │    │
+│  └───────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌───────────────────────────────────────────────┐    │
+│  │  Module Manager                               │    │
+│  │  • Load DLLs from modules/ folder             │    │
+│  │  • Call powertoy_create() on each             │    │
+│  │  • Track enabled/disabled state               │    │
+│  │  • Apply GPO policies                         │    │
+│  └───────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌───────────────────────────────────────────────┐    │
+│  │  Centralized Keyboard Hook                    │    │
+│  │  • Low-level keyboard hook (WH_KEYBOARD_LL)   │    │
+│  │  • Hotkey registration per module             │    │
+│  │  • Performance optimizations                  │    │
+│  │  • Dispatch to module on_hotkey()             │    │
+│  └───────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌───────────────────────────────────────────────┐    │
+│  │  Settings Bridge                              │    │
+│  │  • Named pipe IPC to Settings UI              │    │
+│  │  • JSON message protocol                      │    │
+│  │  • Configuration dispatch to modules          │    │
+│  └───────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌───────────────────────────────────────────────┐    │
+│  │  Update Management                            │    │
+│  │  • Check for updates                          │    │
+│  │  • Download and install                       │    │
+│  │  • Restart coordination                       │    │
+│  └───────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Initialization Sequence
+
+The Runner follows a specific initialization order to ensure all components are ready before modules are enabled.
+
+### 1. Process Initialization
+
+```cpp
+// From src/runner/main.cpp:181-200
+int runner(bool isProcessElevated, bool openSettings, 
+           std::string settingsWindow, bool openOobe, 
+           bool openScoobe, bool showRestartNotificationAfterUpdate)
+{
+    Logger::info("Runner is starting. Elevated={}", isProcessElevated);
+    
+    // Enable DPI awareness for proper scaling
+    DPIAware::EnableDPIAwarenessForThisProcess();
+    
+    // Register telemetry provider
+    Trace::RegisterProvider();
+    
+    // Load settings from file before reading them
+    load_general_settings();
+    auto const settings = get_general_settings();
+    
+    // ...
+}
+```
+
+**Reference:** `src/runner/main.cpp:181`
+
+### 2. Tray Icon Startup
+
+```cpp
+// Start the system tray icon
+start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
+
+// Enable Quick Access flyout if configured
+if (settings.enableQuickAccess) {
+    QuickAccessHost::start();
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:37-65`
+
+### 3. Module Loading
+
+```cpp
+// From src/runner/main.cpp and powertoy_module.cpp
+
+// Scan for module DLLs in the modules/ directory
+std::vector<std::wstring> module_paths = get_module_paths();
+
+for (const auto& path : module_paths) {
+    // Load the DLL
+    HMODULE module_dll = LoadLibraryExW(path.c_str(), nullptr, 
+                                        LOAD_WITH_ALTERED_SEARCH_PATH);
+    
+    if (!module_dll) {
+        Logger::error(L"Failed to load module: {}", path);
+        continue;
+    }
+    
+    // Get the powertoy_create function
+    auto create_func = reinterpret_cast<powertoy_create_func>(
+        GetProcAddress(module_dll, "powertoy_create")
+    );
+    
+    if (!create_func) {
+        Logger::error(L"Module missing powertoy_create: {}", path);
+        continue;
+    }
+    
+    // Create the module instance
+    PowertoyModuleIface* module = create_func();
+    
+    if (!module) {
+        Logger::error(L"powertoy_create returned null: {}", path);
+        continue;
+    }
+    
+    // Store the module
+    std::wstring key = module->get_key();
+    modules[key] = std::make_unique<PowertoyModule>(module, module_dll);
+}
+```
+
+**Reference:** `src/runner/powertoy_module.cpp:13-24`
+
+### 4. Settings Application
+
+```cpp
+// Load module-specific settings and apply GPO policies
+for (auto& [name, module] : modules) {
+    // Check GPO policy
+    auto gpo_policy = module->gpo_policy_enabled_configuration();
+    
+    if (gpo_policy == powertoys_gpo::gpo_rule_configured_disabled) {
+        Logger::info(L"Module {} disabled by GPO", name);
+        continue;
+    }
+    
+    // Load settings from file
+    auto settings_file = get_module_settings_path(name);
+    if (std::filesystem::exists(settings_file)) {
+        auto config = load_json_file(settings_file);
+        module->set_config(config.c_str());
+    }
+    
+    // Enable if configured
+    if (module->is_enabled() || 
+        gpo_policy == powertoys_gpo::gpo_rule_configured_enabled) {
+        module->enable();
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:130-138`
+
+### 5. Keyboard Hook Registration
+
+```cpp
+// Initialize low-level keyboard hook
+start_lowlevel_keyboard_hook();
+
+// Register hotkeys from all modules
+register_hotkeys();
+```
+
+**Reference:** `doc/devdocs/core/runner.md:120-128`
+
+## System Tray Icon
+
+The system tray icon is the primary UI element of the Runner, providing quick access to settings and module controls.
+
+### Implementation
+
+```cpp
+// From src/runner/tray_icon.cpp
+
+void start_tray_icon(bool is_elevated, bool theme_adaptive_icon)
+{
+    // Create notification icon data
+    NOTIFYICONDATAW nid = {};
+    nid.cbSize = sizeof(NOTIFYICONDATAW);
+    nid.hWnd = tray_icon_hwnd;
+    nid.uID = tray_icon_id;
+    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    nid.uCallbackMessage = WM_ICON_NOTIFY;
+    nid.hIcon = LoadIcon(hinstance, MAKEINTRESOURCE(APPICON));
+    wcscpy_s(nid.szTip, L"PowerToys");
+    
+    // Register with system tray
+    Shell_NotifyIconW(NIM_ADD, &nid);
+    
+    // Register for taskbar recreate message
+    // (to restore icon after explorer.exe restart)
+    wm_taskbar_created = RegisterWindowMessageW(L"TaskbarCreated");
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:49-56`, `src/runner/tray_icon.cpp`
+
+### Window Procedure
+
+```cpp
+LRESULT CALLBACK tray_icon_window_proc(HWND hwnd, UINT msg, 
+                                       WPARAM wparam, LPARAM lparam)
+{
+    switch (msg)
+    {
+    case WM_ICON_NOTIFY:
+        switch (lparam)
+        {
+        case WM_LBUTTONUP:
+            // Single left-click: Show Quick Access flyout
+            on_tray_icon_left_click();
+            break;
+            
+        case WM_LBUTTONDBLCLK:
+            // Double left-click: Open Settings Dashboard
+            open_settings_window(ESettingsWindowNames::Dashboard);
+            break;
+            
+        case WM_RBUTTONUP:
+            // Right-click: Show context menu
+            show_tray_icon_menu();
+            break;
+        }
+        break;
+        
+    case WM_COMMAND:
+        // Handle menu item selections
+        handle_menu_command(LOWORD(wparam), lparam);
+        break;
+    }
+    
+    return DefWindowProc(hwnd, msg, wparam, lparam);
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:57-61`
+
+### Tray Icon Actions
+
+**Left Click - Quick Access Flyout:**
+
+```cpp
+void on_tray_icon_left_click()
+{
+    if (!settings_window) {
+        return;
+    }
+    
+    // Get tray icon position for flyout placement
+    POINT cursor_pos;
+    GetCursorPos(&cursor_pos);
+    
+    // Send IPC message to Settings UI
+    json::JsonObject message;
+    message.SetNamedValue(L"ShowYourself", json::value(L"flyout"));
+    message.SetNamedValue(L"x_position", json::value(cursor_pos.x));
+    message.SetNamedValue(L"y_position", json::value(cursor_pos.y));
+    
+    current_settings_ipc->send(message.Stringify().c_str());
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:66-68`, `doc/devdocs/core/runner.md:103-112`
+
+**Double Click - Dashboard:**
+
+```cpp
+void open_settings_window(ESettingsWindowNames page)
+{
+    json::JsonObject message;
+    message.SetNamedValue(L"ShowYourself", 
+                         json::value(ESettingsWindowNames_to_string(page)));
+    current_settings_ipc->send(message.Stringify().c_str());
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:71-74`
+
+**Right Click - Context Menu:**
+
+The context menu is defined in resource files:
+
+```rc
+// From src/runner/runner.rc
+IDM_TRAY_MENU MENU
+BEGIN
+    POPUP "PowerToys"
+    BEGIN
+        MENUITEM "Settings",                ID_SETTINGS_MENU_COMMAND
+        MENUITEM SEPARATOR
+        MENUITEM "Run at startup",          ID_RUN_AT_STARTUP_MENU_COMMAND
+        MENUITEM SEPARATOR
+        MENUITEM "Exit",                    ID_EXIT_MENU_COMMAND
+    END
+END
+```
+
+**Reference:** `doc/devdocs/core/runner.md:114-119`
+
+## Module Management
+
+### Module Discovery
+
+The Runner scans for module DLLs in the `modules/` directory:
+
+```cpp
+std::vector<std::wstring> get_module_paths()
+{
+    std::vector<std::wstring> paths;
+    
+    // Get modules directory path
+    std::wstring modules_dir = get_module_folderpath();
+    
+    // Scan for DLLs
+    for (const auto& entry : std::filesystem::directory_iterator(modules_dir)) {
+        if (entry.path().extension() == L".dll") {
+            // Exclude certain patterns (like *ModuleInterface.dll)
+            std::wstring filename = entry.path().filename().wstring();
+            if (filename.find(L"ModuleInterface") != std::wstring::npos) {
+                paths.push_back(entry.path().wstring());
+            }
+        }
+    }
+    
+    return paths;
+}
+```
+
+**Note:** WinUI 3 applications are located in a separate `WinUI3Apps/` folder to avoid DLL conflicts.
+
+**Reference:** `doc/devdocs/core/runner.md:17-19`
+
+### Module Lifecycle
+
+```cpp
+class PowertoyModule
+{
+private:
+    PowertoyModuleIface* module_;
+    HMODULE dll_handle_;
+    
+public:
+    PowertoyModule(PowertoyModuleIface* module, HMODULE dll_handle)
+        : module_(module), dll_handle_(dll_handle)
+    {
+    }
+    
+    ~PowertoyModule()
+    {
+        if (module_) {
+            module_->destroy();
+            module_ = nullptr;
+        }
+        if (dll_handle_) {
+            FreeLibrary(dll_handle_);
+            dll_handle_ = nullptr;
+        }
+    }
+    
+    // Delegate all interface methods to the module
+    void enable() { module_->enable(); }
+    void disable() { module_->disable(); }
+    bool is_enabled() { return module_->is_enabled(); }
+    // ... etc
+};
+```
+
+**Reference:** `src/runner/powertoy_module.h`, `src/runner/powertoy_module.cpp`
+
+## Centralized Keyboard Hook
+
+The Runner uses a low-level keyboard hook to intercept hotkey presses for all modules. This centralized approach prevents performance issues from multiple hooks.
+
+### Implementation
+
+```cpp
+// From src/runner/centralized_kb_hook.cpp
+
+namespace
+{
+    HHOOK keyboard_hook_handle = nullptr;
+    std::map<size_t, std::vector<Hotkey>> module_hotkeys;
+}
+
+LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    if (nCode == HC_ACTION)
+    {
+        KBDLLHOOKSTRUCT* kb_data = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+        
+        // Performance optimization: ignore keystrokes generated by PowerToys
+        if (kb_data->dwExtraInfo == CENTRALIZED_KEYBOARD_HOOK_DONT_TRIGGER_FLAG) {
+            return CallNextHookEx(keyboard_hook_handle, nCode, wParam, lParam);
+        }
+        
+        // Only process key down events
+        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
+        {
+            // Check if this matches any registered hotkey
+            for (auto& [module_id, hotkeys] : module_hotkeys)
+            {
+                for (size_t i = 0; i < hotkeys.size(); ++i)
+                {
+                    const auto& hotkey = hotkeys[i];
+                    
+                    // Match modifier keys and virtual key code
+                    bool win_pressed = (GetAsyncKeyState(VK_LWIN) & 0x8000) || 
+                                      (GetAsyncKeyState(VK_RWIN) & 0x8000);
+                    bool ctrl_pressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000);
+                    bool alt_pressed = (GetAsyncKeyState(VK_MENU) & 0x8000);
+                    bool shift_pressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000);
+                    
+                    if (hotkey.win == win_pressed &&
+                        hotkey.ctrl == ctrl_pressed &&
+                        hotkey.alt == alt_pressed &&
+                        hotkey.shift == shift_pressed &&
+                        hotkey.key == kb_data->vkCode)
+                    {
+                        // Found matching hotkey - notify module
+                        auto module = get_module_by_id(module_id);
+                        if (module && module->is_enabled())
+                        {
+                            // Call module's hotkey handler
+                            bool handled = module->on_hotkey(i);
+                            
+                            // If handled, swallow the keystroke
+                            if (handled) {
+                                return 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return CallNextHookEx(keyboard_hook_handle, nCode, wParam, lParam);
+}
+
+void start_lowlevel_keyboard_hook()
+{
+    keyboard_hook_handle = SetWindowsHookExW(
+        WH_KEYBOARD_LL,
+        LowLevelKeyboardProc,
+        GetModuleHandle(nullptr),
+        0
+    );
+}
+```
+
+**Performance Optimizations:**
+
+1. **Early Exit on PowerToys-Generated Input**
+   - Uses `dwExtraInfo` flag to ignore synthetic keystrokes
+   - Prevents infinite loops and unnecessary processing
+
+2. **No Key Press Detection**
+   - Returns immediately if no keys are actually pressed
+   - Avoids processing modifier-only events
+
+3. **Metadata Caching**
+   - Caches hotkey information to avoid repeated lookups
+   - Uses efficient data structures for fast matching
+
+**Important:** The hook handler must execute very quickly as it's called on every keystroke system-wide.
+
+**Reference:** `doc/devdocs/core/runner.md:120-128`
+
+## Hotkey Registration
+
+Modules report their hotkeys to the Runner, which registers them with the centralized keyboard hook.
+
+### Hotkey Collection
+
+```cpp
+void register_hotkeys()
+{
+    module_hotkeys.clear();
+    
+    for (auto& [name, module] : modules)
+    {
+        if (!module->is_enabled()) {
+            continue;
+        }
+        
+        // Get hotkeys from module
+        std::vector<Hotkey> hotkeys;
+        
+        // Try new GetHotkeyEx method first
+        auto hotkey_ex = module->GetHotkeyEx();
+        if (hotkey_ex.has_value()) {
+            // Convert HotkeyEx to Hotkey
+            Hotkey hk;
+            hk.win = (hotkey_ex->modifiersMask & MOD_WIN) != 0;
+            hk.ctrl = (hotkey_ex->modifiersMask & MOD_CONTROL) != 0;
+            hk.alt = (hotkey_ex->modifiersMask & MOD_ALT) != 0;
+            hk.shift = (hotkey_ex->modifiersMask & MOD_SHIFT) != 0;
+            hk.key = static_cast<unsigned char>(hotkey_ex->vkCode);
+            hotkeys.push_back(hk);
+        }
+        else {
+            // Fall back to legacy get_hotkeys method
+            const size_t max_hotkeys = 16;
+            Hotkey buffer[max_hotkeys];
+            size_t count = module->get_hotkeys(buffer, max_hotkeys);
+            
+            for (size_t i = 0; i < count; ++i) {
+                hotkeys.push_back(buffer[i]);
+            }
+        }
+        
+        // Store hotkeys for this module
+        if (!hotkeys.empty()) {
+            size_t module_id = get_module_id(name);
+            module_hotkeys[module_id] = std::move(hotkeys);
+        }
+    }
+}
+```
+
+**Reference:** `src/modules/interface/powertoy_module_interface.h:111-124`
+
+### Hotkey Conflict Detection
+
+The Settings UI checks for hotkey conflicts across modules:
+
+1. Each module implements `get_hotkeys()` or `GetHotkeyEx()`
+2. Settings UI collects all hotkeys via Runner IPC
+3. Conflicts are displayed in the Settings UI with warnings
+4. User can resolve conflicts by changing hotkeys
+
+**Reference:** `doc/devdocs/core/settings/settings-implementation.md:74-108`
+
+## IPC with Settings UI
+
+The Runner communicates with the Settings UI process via Windows Named Pipes using a bidirectional JSON protocol.
+
+### Pipe Initialization
+
+```cpp
+// From src/runner/settings_window.cpp
+
+void initialize_settings_window()
+{
+    // Generate unique pipe names
+    std::wstring runner_to_settings_pipe = 
+        L"\\\\.\\pipe\\powertoys_runner_" + std::to_wstring(GetCurrentProcessId());
+    std::wstring settings_to_runner_pipe = 
+        L"\\\\.\\pipe\\powertoys_settings_" + std::to_wstring(GetCurrentProcessId());
+    
+    // Create two-way pipe
+    current_settings_ipc = new TwoWayPipeMessageIPC(
+        runner_to_settings_pipe,
+        settings_to_runner_pipe,
+        [](const std::wstring& message) {
+            // Handle messages from Settings UI
+            dispatch_json_message_to_main_thread(message);
+        }
+    );
+    
+    current_settings_ipc->start();
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:76-91`, `src/runner/settings_window.cpp`
+
+### Message Types
+
+**Runner → Settings UI:**
+
+```cpp
+// Show Settings window
+current_settings_ipc->send(L"{\"ShowYourself\":\"Dashboard\"}");
+
+// Show specific page
+current_settings_ipc->send(L"{\"ShowYourself\":\"FancyZones\"}");
+
+// Show Quick Access flyout with position
+json::JsonObject msg;
+msg.SetNamedValue(L"ShowYourself", json::value(L"flyout"));
+msg.SetNamedValue(L"x_position", json::value(1234));
+msg.SetNamedValue(L"y_position", json::value(567));
+current_settings_ipc->send(msg.Stringify().c_str());
+
+// Update available notification
+current_settings_ipc->send(L"{\"UpdateAvailable\":{\"version\":\"0.75.0\"}}");
+```
+
+**Settings UI → Runner:**
+
+```json
+// General settings changed
+{
+  "general": {
+    "startup": true,
+    "theme": "dark",
+    "run_elevated": false
+  }
+}
+
+// Module settings changed
+{
+  "powertoy": "FancyZones",
+  "properties": {
+    "fancyzones_shiftDrag": { "value": true },
+    "fancyzones_zoneCount": { "value": 3 }
+  }
+}
+
+// Module enabled/disabled
+{
+  "action": {
+    "FancyZones": {
+      "action_name": "enable",
+      "value": true
+    }
+  }
+}
+```
+
+**Reference:** `doc/devdocs/core/settings/runner-ipc.md:16-20`
+
+### Message Processing
+
+```cpp
+void dispatch_json_message_to_main_thread(const std::wstring& message)
+{
+    // Parse JSON message
+    auto json_msg = json::JsonObject::Parse(message);
+    
+    if (json::has(json_msg, L"general")) {
+        // General settings update
+        auto general = json_msg.GetNamedObject(L"general");
+        apply_general_settings(general);
+    }
+    else if (json::has(json_msg, L"powertoy")) {
+        // Module settings update
+        std::wstring module_name = json_msg.GetNamedString(L"powertoy");
+        auto properties = json_msg.GetNamedObject(L"properties");
+        
+        // Find module and update settings
+        auto module_it = modules.find(module_name);
+        if (module_it != modules.end()) {
+            // Serialize to JSON string
+            std::wstring config = json_msg.Stringify();
+            module_it->second->set_config(config.c_str());
+        }
+    }
+    else if (json::has(json_msg, L"action")) {
+        // Module enable/disable action
+        auto action = json_msg.GetNamedObject(L"action");
+        for (const auto& [module_name, action_obj] : action) {
+            auto module_it = modules.find(module_name.c_str());
+            if (module_it != modules.end()) {
+                bool enable = action_obj.GetObjectW()
+                    .GetNamedBoolean(L"value", false);
+                
+                if (enable) {
+                    module_it->second->enable();
+                } else {
+                    module_it->second->disable();
+                }
+            }
+        }
+    }
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:157`, `src/runner/tray_icon.cpp:157`
+
+## Update Management
+
+The Runner handles automatic update checking and installation.
+
+### Update Checking
+
+```cpp
+// From src/runner/UpdateUtils.cpp
+
+void check_for_updates()
+{
+    std::thread([]() {
+        try {
+            // Check GitHub releases API
+            auto latest_version = get_latest_release_version();
+            auto current_version = get_current_version();
+            
+            if (latest_version > current_version) {
+                // Notify Settings UI of available update
+                json::JsonObject msg;
+                msg.SetNamedValue(L"UpdateAvailable", 
+                    json::JsonObject().
+                        SetNamedValue(L"version", 
+                            json::value(latest_version.to_wstring())));
+                
+                current_settings_ipc->send(msg.Stringify().c_str());
+            }
+        }
+        catch (const std::exception& e) {
+            Logger::error("Update check failed: {}", e.what());
+        }
+    }).detach();
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:196`
+
+### Update Installation
+
+When the user approves an update from the Settings UI:
+
+1. Download installer to temp directory
+2. Verify digital signature
+3. Close all PowerToys processes
+4. Launch installer with elevation
+5. Exit Runner (installer will restart after completion)
+
+**Reference:** `src/runner/UpdateUtils.cpp`
+
+## Key Source Files
+
+| File | Purpose | Reference |
+|------|---------|----------|
+| `main.cpp` | Entry point, initialization, message loop | `src/runner/main.cpp:150` |
+| `powertoy_module.h/cpp` | Module loading and management | `src/runner/powertoy_module.cpp:153` |
+| `tray_icon.cpp` | System tray icon and menu | `src/runner/tray_icon.cpp:156` |
+| `settings_window.cpp` | Settings UI communication | `src/runner/settings_window.cpp:160` |
+| `general_settings.cpp` | General settings loading/saving | `src/runner/general_settings.cpp:163` |
+| `centralized_kb_hook.cpp` | Keyboard hook implementation | `src/runner/centralized_kb_hook.cpp:184` |
+| `centralized_hotkeys.cpp` | Hotkey registration logic | `src/runner/centralized_hotkeys.cpp:181` |
+| `UpdateUtils.cpp` | Update checking and installation | `src/runner/UpdateUtils.cpp:196` |
+| `trace.cpp` | Telemetry implementation | `src/runner/trace.cpp:172` |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Module Interface" icon="plug" href="./module-interface">
+    Learn how to implement a PowerToys module
+  </Card>
+  <Card title="Settings System" icon="sliders" href="./settings-system">
+    Understand the settings architecture and IPC
+  </Card>
+  <Card title="Architecture Overview" icon="sitemap" href="./architecture-overview">
+    High-level system architecture
+  </Card>
+  <Card title="Common Libraries" icon="book" href="../common-libraries">
+    Shared utilities and helper functions
+  </Card>
+</CardGroup>

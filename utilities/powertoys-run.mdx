@@ -1,0 +1,448 @@
+---
+title: PowerToys Run
+description: A quick launcher for Windows that helps you search and launch applications, files, and execute commands instantly.
+---
+
+PowerToys Run is a fast, keyboard-driven launcher that helps you search your machine and the web instantly. Activate it with a keyboard shortcut to search for applications, files, folders, execute calculations, and more using a plugin-based architecture.
+
+## Activation
+
+<Steps>
+  <Step title="Default Activation">
+    Press `Alt + Space` to open PowerToys Run from anywhere in Windows.
+  </Step>
+  <Step title="Customize Shortcut">
+    Open PowerToys Settings > PowerToys Run > Activation shortcut to configure your preferred hotkey.
+  </Step>
+</Steps>
+
+<Note>
+  PowerToys Run must be enabled in PowerToys Settings for the activation shortcut to work.
+</Note>
+
+## Core Features
+
+### Global and Direct Query Modes
+
+PowerToys Run supports two query modes:
+
+<Tabs>
+  <Tab title="Global Query">
+    Search across all enabled plugins without using action keywords:
+    
+    ```
+    notepad
+    ```
+    
+    Results from all plugins (Programs, Folder, Indexer) are combined.
+  </Tab>
+  <Tab title="Direct Query">
+    Use an action keyword to target a specific plugin:
+    
+    ```
+    = 2 + 2
+    < chrome
+    ? localhost:3000
+    ```
+    
+    Only the targeted plugin returns results.
+  </Tab>
+</Tabs>
+
+### Search Position Options
+
+<Accordion title="Window Positioning">
+  Configure where PowerToys Run appears on screen:
+  
+  - **Primary Monitor**: Always appears on the primary display
+  - **Cursor Position**: Appears on the monitor containing the mouse cursor
+  - **Focus**: Appears on the monitor with the currently focused window
+  
+  Enable "Remember last launch location" to pin the window position.
+</Accordion>
+
+### Search Performance
+
+<Accordion title="Search Input Delay Settings">
+  PowerToys Run implements throttled search for better performance:
+  
+  - **Fast results delay**: Default 150ms - shows quick results from lightweight plugins
+  - **Full results delay**: Default 300ms - executes all plugin queries including slower ones
+  - **Disable delay**: Set "Search query results with delay" to off for instant search
+  
+  From source `/src/modules/launcher/PowerLauncher/MainWindow.xaml.cs:273-277`:
+  
+  ```csharp
+  .Throttle(TimeSpan.FromMilliseconds(_settings.SearchInputDelayFast))
+  .Do(@event => Dispatcher.InvokeAsync(() => PerformSearchQuery((TextBox)@event.Sender, false, @event)))
+  .Throttle(TimeSpan.FromMilliseconds(_settings.SearchInputDelay))
+  .Do(@event => Dispatcher.InvokeAsync(() => PerformSearchQuery((TextBox)@event.Sender, true, @event)))
+  ```
+</Accordion>
+
+## Built-in Plugins
+
+PowerToys Run includes 20 built-in plugins. Each can be enabled/disabled independently.
+
+### Calculator Plugin
+
+<CardGroup cols={2}>
+  <Card title="Action Keyword" icon="equals">
+    `=`
+  </Card>
+  <Card title="Global Query" icon="check">
+    Enabled
+  </Card>
+</CardGroup>
+
+**Examples:**
+
+<CodeGroup>
+```text Direct Query
+= 2 + 2
+= sqrt(144)
+= sin(pi/2)
+= 0x2A + 0b101010
+```
+
+```text Global Query
+2 + 2
+100 * 0.15
+pi * 4^2
+```
+</CodeGroup>
+
+<Accordion title="Calculator Features">
+  - Supports basic arithmetic, trigonometric functions, logarithms
+  - Hexadecimal (`0x`) and binary (`0b`) number formats
+  - Trigonometry modes: Radians (default), Degrees, Gradians
+  - Constants: `pi`, `e`
+  - Input/output format options (English vs. locale-specific)
+  - Replace input mode: Type `=` at end to replace query with result
+  
+  Plugin ID: `CEA0FDFC6D3B4085823D60DC76F28855`
+</Accordion>
+
+### Program Plugin
+
+<CardGroup cols={2}>
+  <Card title="Action Keyword" icon="dot-circle">
+    `.`
+  </Card>
+  <Card title="Global Query" icon="check">
+    Enabled
+  </Card>
+</CardGroup>
+
+Searches installed applications, Win32 programs, and UWP apps.
+
+**Examples:**
+```
+chrome
+vscode
+. calculator
+```
+
+Plugin ID: `791FC278BA414111B8D1886DFE447410`
+
+### Window Walker Plugin
+
+<CardGroup cols={2}>
+  <Card title="Action Keyword" icon="less-than">
+    `<`
+  </Card>
+  <Card title="Global Query" icon="check">
+    Enabled
+  </Card>
+</CardGroup>
+
+Search and switch between open windows.
+
+**Examples:**
+```
+< browser
+< untitled
+code
+```
+
+Plugin ID: `F737A9223560B3C6833B5FFB8CDF78E5`
+
+### Shell Plugin
+
+Execute shell commands directly.
+
+**Examples:**
+```
+> ipconfig /all
+> dir C:\Users
+> netstat -an
+```
+
+### Folder & Indexer Plugins
+
+Search for files and folders using Windows Search index.
+
+**Examples:**
+```
+report.docx
+C:\Projects\PowerToys
+%APPDATA%
+```
+
+### URI Plugin
+
+Open URLs and URIs directly.
+
+**Examples:**
+```
+https://github.com
+file:///C:/temp/test.html
+mailto:example@email.com
+```
+
+### Unit Converter Plugin
+
+Convert between units of measurement.
+
+**Examples:**
+```
+100 cm to inches
+5 kg to lbs
+32 fahrenheit to celsius
+```
+
+### Value Generator Plugin
+
+Generate UUIDs, GUIDs, hashes, and base64 encoding.
+
+**Examples:**
+```
+uuid
+guid
+md5 hello world
+base64 encode test
+```
+
+### VS Code Workspaces Plugin
+
+Quickly open VS Code workspaces and remote SSH connections.
+
+### System Plugin
+
+Execute system commands.
+
+**Examples:**
+```
+shutdown
+restart
+lock
+sleep
+empty recycle bin
+```
+
+### Time & Date Plugin
+
+Display current time, convert timestamps, and manage timezones.
+
+**Examples:**
+```
+time
+date
+timestamp
+unix 1234567890
+```
+
+### Windows Settings Plugin
+
+Quickly access Windows Settings pages.
+
+**Examples:**
+```
+settings display
+settings bluetooth
+settings wifi
+```
+
+### Windows Terminal Plugin
+
+Open Windows Terminal profiles directly.
+
+### History Plugin
+
+View and re-execute previous PowerToys Run queries.
+
+### Registry Plugin
+
+Navigate to registry keys.
+
+**Examples:**
+```
+HKEY_CURRENT_USER\Software
+HKLM\System
+```
+
+### Service Plugin
+
+Search and manage Windows services.
+
+**Examples:**
+```
+service windows update
+service print spooler
+```
+
+### OneNote Plugin
+
+Search and open OneNote notebooks and pages.
+
+### PowerToys Plugin
+
+Quickly access PowerToys utilities and settings.
+
+### Web Search Plugin
+
+Search the web using configured search engines.
+
+## Advanced Features
+
+### Context Menu Actions
+
+<Tabs>
+  <Tab title="Keyboard">
+    Use arrow keys to navigate results:
+    - `↑` `↓` Navigate results
+    - `←` `→` Navigate context menu actions
+    - `Enter` Execute selected action
+    - `Tab` Cycle through results
+  </Tab>
+  <Tab title="Mouse">
+    - Click result to execute default action
+    - Right-click or hover to show context menu
+    - Drag files from results to other applications
+  </Tab>
+</Tabs>
+
+<Accordion title="File Drag & Drop">
+  PowerToys Run supports dragging file results to other applications. From source code (`MainWindow.xaml.cs:349-378`):
+  
+  - Detects `IFileDropResult` context data
+  - Creates drag data object with file path
+  - Generates thumbnail as drag image
+  - Supports standard drag-drop operations
+</Accordion>
+
+### Auto-Complete
+
+PowerToys Run shows auto-complete suggestions based on the selected result. The gray text after your query indicates the full match.
+
+### Plugin Overview
+
+When PowerToys Run opens with an empty query, it displays an overview of available plugins with their action keywords.
+
+<Tip>
+  Navigate the plugin overview with `↑` `↓` or `Tab` keys, then press `Enter` to start a query with that plugin's action keyword.
+</Tip>
+
+## Configuration
+
+### Global Settings
+
+<Steps>
+  <Step title="Maximum Results">
+    Configure how many results to display (default: 4, max: 16).
+  </Step>
+  <Step title="Clear Input">
+    Choose whether to clear the previous query when opening PowerToys Run.
+  </Step>
+  <Step title="Hide on Deactivate">
+    Automatically hide when focus is lost (enabled by default).
+  </Step>
+</Steps>
+
+### Per-Plugin Settings
+
+Each plugin can be:
+- Enabled or disabled
+- Configured with custom action keywords
+- Set to global mode or direct query only
+- Given plugin-specific settings (varies by plugin)
+
+<Warning>
+  Disabling all plugins will make PowerToys Run non-functional. Keep at least one plugin enabled.
+</Warning>
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Alt + Space` | Open/Close PowerToys Run (default) |
+| `Esc` | Close PowerToys Run |
+| `↑` `↓` | Navigate results |
+| `←` `→` | Navigate context menu |
+| `Enter` | Execute selected result |
+| `Tab` / `Shift + Tab` | Cycle through results |
+| `Page Up` / `Page Down` | Jump through results |
+| `Ctrl + C` | Copy result (when supported) |
+| `Ctrl + Shift + Enter` | Run as administrator (when supported) |
+| `Backspace` (hold) | Clear input |
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Quick Calculations">
+    Use PowerToys Run as a calculator without opening a separate app:
+    - Convert units: `100 usd to eur`
+    - Calculate tips: `= 45.50 * 0.18`
+    - Hexadecimal: `= 0xFF + 256`
+  </Accordion>
+  
+  <Accordion title="Developer Workflows">
+    - Generate UUIDs for code
+    - Encode/decode base64 strings
+    - Open project folders quickly
+    - Launch VS Code workspaces
+    - Open terminal profiles
+  </Accordion>
+  
+  <Accordion title="System Administration">
+    - Manage Windows services
+    - Execute shell commands
+    - Navigate registry
+    - Access Windows Settings
+    - Lock, shutdown, restart
+  </Accordion>
+  
+  <Accordion title="Window Management">
+    - Switch between open windows by name
+    - Find windows across virtual desktops
+    - Access applications by typing partial names
+  </Accordion>
+</AccordionGroup>
+
+## Performance Optimization
+
+<Tip>
+  If PowerToys Run feels slow, try these optimizations:
+  
+  1. Disable plugins you don't use (especially Indexer on slow drives)
+  2. Reduce the search delay to 0ms for instant results
+  3. Limit the maximum number of results
+  4. Disable "Include in global result" for resource-intensive plugins
+</Tip>
+
+## Telemetry
+
+PowerToys Run collects anonymous usage telemetry:
+- Activation count and timing (cold/warm state)
+- Plugin enabled/disabled state
+- First delete event (to measure discoverability)
+
+From source `MainWindow.xaml.cs:100-121`, `MainWindow.xaml.cs:806-814`.
+
+## Source Code
+
+Location: `/src/modules/launcher/`
+
+- Main window: `PowerLauncher/MainWindow.xaml.cs`
+- Plugin manager: Plugin system in `/launcher/Plugins/`
+- View model: `ViewModel/MainViewModel.cs`

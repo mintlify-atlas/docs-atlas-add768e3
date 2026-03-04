@@ -1,0 +1,392 @@
+---
+title: Building PowerToys
+description: Complete guide to building PowerToys from source, including prerequisites, build commands, and troubleshooting
+---
+
+## Prerequisites
+
+Before building PowerToys, ensure your development environment meets these requirements:
+
+### System Requirements
+
+- Windows 10 April 2018 Update (version 1803) or newer
+- Long paths enabled in Windows ([see instructions](https://docs.microsoft.com/windows/win32/fileio/maximum-file-path-limitation#enabling-long-paths-in-windows-10-version-1607-and-later))
+- Windows Developer Mode enabled
+
+### Required Software
+
+**Visual Studio 2022 17.4+ or Visual Studio 2026** with the following workloads:
+
+- Desktop Development with C++
+- WinUI application development
+- .NET desktop development
+- Windows 10 SDK (10.0.22621.0)
+- Windows 11 SDK (10.0.26100.3916)
+
+**Additional Components:**
+
+- .NET 8 SDK
+- Git (for cloning and submodule management)
+
+<Tip>
+You can automatically install Visual Studio with all required components using WinGet configuration files:
+
+```powershell
+winget configure .config\configuration.vsEnterprise.winget
+```
+
+Choose the file matching your Visual Studio edition (Professional, Enterprise, etc.).
+</Tip>
+
+## Initial Setup
+
+### Automated Setup (Recommended)
+
+Run the automated setup script from the repository root:
+
+```powershell
+.\tools\build\setup-dev-environment.ps1
+```
+
+This script will:
+- Enable Windows long path support (requires administrator privileges)
+- Enable Windows Developer Mode (requires administrator privileges)
+- Guide you through installing required Visual Studio components from `.vsconfig`
+- Initialize git submodules
+
+Run with `-Help` to see all available options.
+
+### Manual Setup
+
+If you prefer manual setup:
+
+1. **Import Visual Studio components:**
+   - Open Visual Studio Installer
+   - Import the `.vsconfig` file from the repository root
+   - Or open `PowerToys.slnx` and click "install extra components" if prompted
+
+2. **Initialize submodules:**
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+<Warning>
+Submodule initialization is a one-time step required before you can compile most parts of PowerToys. Failure to initialize submodules will result in build errors.
+</Warning>
+
+## Build Methods
+
+### Building with Visual Studio
+
+1. Open `PowerToys.slnx` in Visual Studio
+2. Select configuration from the **Solutions Configuration** dropdown:
+   - `Debug` - For development and debugging
+   - `Release` - For production builds
+3. Build the solution:
+   - Menu: **Build > Build Solution**
+   - Keyboard: `Ctrl+Shift+B`
+
+Build output will be located in:
+- `x64\Release\` for Release builds
+- `x64\Debug\` for Debug builds
+
+<Note>
+You can run `x64\Release\PowerToys.exe` directly without installing, but some modules (PowerRename, ImageResizer, File Explorer extensions) require building and installing the full installer to function properly.
+</Note>
+
+### Building from Command Line
+
+PowerToys provides several build scripts in `tools\build\` for command-line builds:
+
+#### Quick Build (Essentials)
+
+For faster iteration during development, build only the runner and settings:
+
+```powershell
+# Using PowerShell script
+.\tools\build\build-essentials.ps1
+
+# Or using CMD wrapper
+.\tools\build\build-essentials.cmd
+```
+
+**Options:**
+```powershell
+# Specify platform and configuration
+.\tools\build\build-essentials.ps1 -Platform x64 -Configuration Release
+
+# ARM64 build
+.\tools\build\build-essentials.ps1 -Platform arm64 -Configuration Debug
+```
+
+#### Full Solution Build
+
+Build any projects in the current directory:
+
+```powershell
+# Auto-detects platform
+.\tools\build\build.ps1
+
+# Specify configuration
+.\tools\build\build.ps1 -Platform x64 -Configuration Release
+
+# Restore packages only
+.\tools\build\build.ps1 -RestoreOnly
+
+# Pass additional MSBuild arguments
+.\tools\build\build.ps1 '/p:CIBuild=true' '/p:CustomProp=Value'
+```
+
+#### Build with Installer
+
+To build the complete installer package (Release only):
+
+```powershell
+.\tools\build\build-installer.ps1 -Platform x64 -Configuration Release
+```
+
+**Installer Options:**
+```powershell
+# Per-user installer
+.\tools\build\build-installer.ps1 -PerUser true
+
+# Specify installer suffix
+.\tools\build\build-installer.ps1 -InstallerSuffix wix5
+```
+
+<Warning>
+The installer can **only** be built in `Release` mode. Debug installers are not supported.
+</Warning>
+
+### Using MSBuild Directly
+
+For advanced scenarios, use MSBuild directly from Developer Command Prompt:
+
+```powershell
+# Full build with restore
+msbuild -restore -p:RestorePackagesConfig=true -p:Platform=x64 -m PowerToys.slnx
+
+# ARM64 build
+msbuild -restore -p:RestorePackagesConfig=true -p:Platform=ARM64 -m PowerToys.slnx /tl /p:NuGetInteractive="true"
+
+# Clean build
+msbuild PowerToys.slnx /t:Clean /p:Platform=x64 /p:Configuration=Debug
+```
+
+## Build Configurations
+
+### Debug vs Release
+
+| Configuration | Use Case | Optimizations | Debug Info | Performance |
+|--------------|----------|---------------|------------|-------------|
+| **Debug** | Development, debugging | Disabled | Full | Slower |
+| **Release** | Production, installer | Enabled | Minimal | Optimized |
+
+### Platform Options
+
+- **x64** - Intel/AMD 64-bit processors (most common)
+- **ARM64** - ARM-based Windows devices
+
+<Tip>
+The build scripts auto-detect your platform if not specified. Override with `-Platform` parameter when needed.
+</Tip>
+
+## Build Logs and Output
+
+Build logs are created next to the solution/project being built:
+
+| Log File | Contents |
+|----------|----------|
+| `build.<config>.<platform>.errors.log` | Errors only (check this first) |
+| `build.<config>.<platform>.warnings.log` | Warnings only |
+| `build.<config>.<platform>.all.log` | Complete build output |
+| `build.<config>.<platform>.trace.binlog` | Binary log for MSBuild Structured Log Viewer |
+
+**Example locations:**
+```
+build.Release.x64.errors.log
+build.Debug.ARM64.all.log
+build.Release.x64.trace.binlog
+```
+
+<Tip>
+Use [MSBuild Structured Log Viewer](https://msbuildlog.com/) to analyze `.binlog` files for detailed build investigation.
+</Tip>
+
+## Common Build Errors
+
+### Submodules Not Initialized
+
+**Error:** Missing dependencies or file not found errors
+
+**Solution:**
+```bash
+git submodule update --init --recursive
+```
+
+### Missing NuGet Packages
+
+**Error:** NuGet package restore failures
+
+**Solution:**
+```powershell
+# Run essentials build first to restore packages
+.\tools\build\build-essentials.cmd
+```
+
+### Missing Image Files or Assets
+
+**Error:** Build errors about missing `.png`, `.ico`, or other asset files
+
+**Solution:** Clean and rebuild
+
+```powershell
+# Using the cleanup script
+.\tools\build\clean-artifacts.ps1
+
+# Then rebuild
+.\tools\build\build.ps1
+```
+
+Or manually:
+```powershell
+# Clean via MSBuild
+msbuild PowerToys.slnx /t:Clean /p:Platform=x64 /p:Configuration=Debug
+
+# Delete build folders
+Remove-Item -Recurse -Force x64, ARM64, Debug, Release, packages -ErrorAction SilentlyContinue
+
+# Rebuild
+msbuild -restore -p:Platform=x64 -m PowerToys.slnx
+```
+
+### Visual Studio Environment Not Found
+
+**Error:** Cannot find Visual Studio or MSBuild
+
+**Solution:**
+- Ensure Visual Studio is installed with required workloads
+- Run from "Developer PowerShell for VS 2022" or "Developer Command Prompt for VS"
+- Verify `vswhere.exe` exists in `C:\Program Files (x86)\Microsoft Visual Studio\Installer`
+
+### Long Path Issues
+
+**Error:** File path too long errors
+
+**Solution:** Enable long paths in Windows:
+
+```powershell
+# Run as Administrator
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+```
+
+Or use the automated setup script which handles this for you.
+
+### Unsigned DLLs/Executables
+
+**Error:** Pipeline fails with unsigned DLL/executable errors
+
+**Solution:**
+- For PowerToys modules: Add them to the signing configuration
+- For external libraries: Verify they're safe before adding to signing list
+- Check the signing JSON file in the repository
+
+## Build Performance Tips
+
+### Faster Iteration
+
+1. **Use essentials build** for quick testing of runner and settings:
+   ```powershell
+   .\tools\build\build-essentials.ps1
+   ```
+
+2. **Build specific projects** by navigating to the project folder:
+   ```powershell
+   cd src\modules\YourModule
+   ..\..\..\tools\build\build.ps1
+   ```
+
+3. **Parallel builds** with MSBuild `-m` flag:
+   ```powershell
+   msbuild -m -p:Platform=x64 PowerToys.slnx
+   ```
+
+### Reduce Disk Usage
+
+Clean build artifacts periodically:
+
+```powershell
+# Clean using helper script
+.\tools\build\clean-artifacts.ps1
+
+# Skip MSBuild clean, only delete folders
+.\tools\build\clean-artifacts.ps1 -SkipMSBuildClean
+```
+
+## Building Individual Components
+
+### Building a Specific Module
+
+```powershell
+# Navigate to module directory
+cd src\modules\FancyZones
+
+# Build the module
+..\..\..\tools\build\build.ps1
+```
+
+### Building the Installer Only
+
+Prerequisites:
+1. Build `PowerToys.slnx` in Release mode
+2. Build `tools\BugReportTool\BugReportTool.sln`
+3. Build `tools\StylesReportTool\StylesReportTool.sln`
+
+Then:
+```powershell
+# Build installer
+cd installer
+..\tools\build\build.ps1 -Configuration Release
+```
+
+Or use the all-in-one script:
+```powershell
+.\tools\build\build-installer.ps1
+```
+
+## Git Worktree Workflow
+
+For working on multiple features simultaneously, use git worktrees:
+
+```powershell
+# Create worktree from branch
+.\tools\build\New-WorktreeFromBranch.ps1
+
+# Create worktree from fork
+.\tools\build\New-WorktreeFromFork.ps1
+
+# Create worktree from issue
+.\tools\build\New-WorktreeFromIssue.ps1
+
+# Delete worktree
+.\tools\build\Delete-Worktree.ps1
+```
+
+See `tools\build\Worktree-Guidelines.md` for detailed instructions.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Debugging" icon="bug" href="/dev/debugging">
+    Learn how to debug PowerToys modules and troubleshoot issues
+  </Card>
+  <Card title="Testing" icon="flask" href="/dev/testing">
+    Write and run tests for your PowerToys contributions
+  </Card>
+  <Card title="Creating New Utility" icon="plus" href="/dev/creating-new-utility">
+    Step-by-step guide to create a new PowerToys utility
+  </Card>
+  <Card title="Coding Style" icon="code" href="/dev/coding-style">
+    Follow PowerToys coding standards and conventions
+  </Card>
+</CardGroup>

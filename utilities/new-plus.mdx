@@ -1,0 +1,411 @@
+---
+title: New+
+description: An enhanced file creation context menu that lets you create files from templates directly in File Explorer.
+---
+
+New+ extends the Windows File Explorer "New" context menu with customizable file templates. Create files from your own templates with a single right-click.
+
+## Activation
+
+<Steps>
+  <Step title="Open Context Menu">
+    Right-click in any File Explorer window or on the desktop.
+  </Step>
+  <Step title="Navigate to New+">
+    Hover over **New** or **New+** in the context menu.
+  </Step>
+  <Step title="Select Template">
+    Choose from your configured templates or built-in options.
+  </Step>
+  <Step title="Name File">
+    Enter a name for the new file and press Enter.
+  </Step>
+</Steps>
+
+<Note>
+  New+ appears as an enhanced version of the standard Windows "New" menu when enabled in PowerToys Settings.
+</Note>
+
+## Features
+
+### Custom Templates
+
+Create files from your own templates instead of empty files.
+
+<Accordion title="Template Configuration">
+  New+ uses a template folder where you store template files:
+  
+  **Default location:** `%USERPROFILE%\Documents\PowerToys\New+\Templates`
+  
+  Any file placed in this folder becomes available in the New+ menu.
+</Accordion>
+
+<Steps>
+  <Step title="Create Template">
+    Create a file with your desired content (e.g., `template.md`, `script_template.py`).
+  </Step>
+  <Step title="Add to Templates Folder">
+    Copy the file to your New+ templates directory.
+  </Step>
+  <Step title="Configure Settings">
+    Optionally customize the template name, icon, or visibility in PowerToys Settings.
+  </Step>
+  <Step title="Use Template">
+    Right-click in File Explorer > New+ > Select your template.
+  </Step>
+</Steps>
+
+### Variable Substitution
+
+New+ supports variable replacement in template files.
+
+From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:37`:
+
+<CodeGroup>
+```text Available Variables
+$PARENT_FOLDER_NAME - Name of the current folder
+```
+</CodeGroup>
+
+**Example Template:**
+
+```markdown README Template
+# $PARENT_FOLDER_NAME
+
+Project description goes here.
+
+## Installation
+
+## Usage
+
+## License
+```
+
+When created in a folder named "MyProject", this becomes:
+
+```markdown Generated File
+# MyProject
+
+Project description goes here.
+...
+```
+
+<Tip>
+  Use variables to create context-aware templates that adapt to the current folder or project.
+</Tip>
+
+### Template Organization
+
+<Tabs>
+  <Tab title="Flat Structure">
+    Store all templates in the root templates folder:
+    
+    ```
+    Templates/
+      template.md
+      script.py
+      config.json
+    ```
+    
+    All templates appear at the top level of the New+ menu.
+  </Tab>
+  
+  <Tab title="Nested Folders">
+    Organize templates in subfolders:
+    
+    ```
+    Templates/
+      Documents/
+        letter.docx
+        report.docx
+      Code/
+        python_script.py
+        javascript_module.js
+    ```
+    
+    Subfolders appear as submenu items in New+.
+  </Tab>
+</Tabs>
+
+## Configuration
+
+### Settings
+
+Configure New+ in PowerToys Settings > New+:
+
+<AccordionGroup>
+  <Accordion title="Template Location">
+    **Setting:** `TemplateLocation`
+    
+    Customize where New+ looks for template files. Default is `%USERPROFILE%\Documents\PowerToys\New+\Templates`.
+    
+    From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:19`
+  </Accordion>
+  
+  <Accordion title="Hide File Extension">
+    **Setting:** `HideFileExtension`
+    
+    When creating files from templates, hide or show the file extension in the initial filename.
+    
+    From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:13`
+  </Accordion>
+  
+  <Accordion title="Hide Starting Digits">
+    **Setting:** `HideStartingDigits`
+    
+    Remove leading digits from template names when displaying in menu (useful for ordering templates).
+    
+    Example: `01_markdown.md` displays as `markdown.md`
+    
+    From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:15`
+  </Accordion>
+  
+  <Accordion title="Replace Variables">
+    **Setting:** `ReplaceVariables`
+    
+    Enable or disable variable substitution in template files.
+    
+    From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:17`
+  </Accordion>
+  
+  <Accordion title="Hide Built-in New Menu">
+    **Setting:** `BuiltInNewHidePreference`
+    
+    Hide the standard Windows "New" menu items and show only New+ templates.
+    
+    From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:21`
+  </Accordion>
+</AccordionGroup>
+
+### Template Icons
+
+New+ displays icons based on file type associations:
+
+- Uses Windows file type icons automatically
+- Custom icons via template configuration
+- Light/dark theme support
+
+From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:29-35`:
+
+```cpp
+new_icon_light_resource_relative_path[] = L"\\Assets\\NewPlus\\New_light.ico";
+new_icon_dark_resource_relative_path[] = L"\\Assets\\NewPlus\\New_dark.ico";
+```
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Development Workflows" icon="code">
+    Create pre-configured source files:
+    - Python scripts with standard imports
+    - React components with boilerplate
+    - Config files with defaults
+  </Card>
+  
+  <Card title="Documentation" icon="file-lines">
+    Quickly create documentation files:
+    - README templates
+    - API documentation
+    - Project proposals
+  </Card>
+  
+  <Card title="Project Initialization" icon="folder-tree">
+    Start new projects with:
+    - License files
+    - .gitignore templates
+    - CI/CD configurations
+  </Card>
+  
+  <Card title="Productivity" icon="bolt">
+    Common file patterns:
+    - Meeting notes templates
+    - Task lists
+    - Email drafts
+  </Card>
+</CardGroup>
+
+## Example Templates
+
+<AccordionGroup>
+  <Accordion title="Python Script Template">
+    **File:** `python_script.py`
+    
+    ```python
+    #!/usr/bin/env python3
+    """
+    $PARENT_FOLDER_NAME - Script Description
+    
+    Author: Your Name
+    Date: 2024
+    """
+    
+    import sys
+    import os
+    
+    def main():
+        """Main function."""
+        pass
+    
+    if __name__ == "__main__":
+        main()
+    ```
+  </Accordion>
+  
+  <Accordion title="Markdown Document">
+    **File:** `document.md`
+    
+    ```markdown
+    # Document Title
+    
+    **Project:** $PARENT_FOLDER_NAME
+    
+    **Date:** 2024-03-04
+    
+    ## Overview
+    
+    ## Details
+    
+    ## Conclusion
+    ```
+  </Accordion>
+  
+  <Accordion title="Git Configuration">
+    **File:** `.gitignore`
+    
+    ```gitignore
+    # $PARENT_FOLDER_NAME - Git Ignore
+    
+    # Python
+    __pycache__/
+    *.py[cod]
+    *$py.class
+    *.so
+    .Python
+    
+    # Virtual environments
+    venv/
+    env/
+    
+    # IDE
+    .vscode/
+    .idea/
+    
+    # OS
+    .DS_Store
+    Thumbs.db
+    ```
+  </Accordion>
+  
+  <Accordion title="HTML5 Boilerplate">
+    **File:** `index.html`
+    
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>$PARENT_FOLDER_NAME</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>$PARENT_FOLDER_NAME</h1>
+        <p>Content goes here.</p>
+    </body>
+    </html>
+    ```
+  </Accordion>
+  
+  <Accordion title="JSON Configuration">
+    **File:** `config.json`
+    
+    ```json
+    {
+      "name": "$PARENT_FOLDER_NAME",
+      "version": "1.0.0",
+      "description": "",
+      "settings": {
+        "enabled": true,
+        "debug": false
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Features
+
+### Template Ordering
+
+Control the order of templates in the menu by prefixing filenames with numbers:
+
+```
+Templates/
+  01_readme.md
+  02_license.txt
+  03_gitignore.txt
+```
+
+With "Hide starting digits" enabled, the menu shows:
+- readme.md
+- license.txt
+- gitignore.txt
+
+### Context Menu Integration
+
+New+ integrates with File Explorer through a shell extension:
+
+From source `/src/modules/NewPlus/NewShellExtensionContextMenu/constants.h:23-27`:
+
+```cpp
+context_menu_package_name[] = L"NewPlusContextMenu";
+module_name[] = L"NewPlus.ShellExtension";
+```
+
+The shell extension is registered dynamically when PowerToys loads.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="New+ Not Appearing in Context Menu">
+    - Ensure New+ is enabled in PowerToys Settings
+    - Restart File Explorer: Right-click taskbar > Task Manager > Restart "Windows Explorer"
+    - Verify PowerToys is running
+    - Check that templates folder exists and is accessible
+  </Accordion>
+  
+  <Accordion title="Templates Not Showing">
+    - Verify template location setting points to correct folder
+    - Check that template files exist in the templates directory
+    - Ensure files are not hidden or system files
+    - Restart File Explorer after adding new templates
+  </Accordion>
+  
+  <Accordion title="Variables Not Substituting">
+    - Enable "Replace variables" in PowerToys Settings
+    - Verify variable syntax: `$PARENT_FOLDER_NAME`
+    - Check that template file is not read-only
+    - Some binary file formats may not support variable substitution
+  </Accordion>
+  
+  <Accordion title="Icons Not Displaying">
+    - File icons come from Windows file type associations
+    - Install applications that register icon handlers for custom file types
+    - Rebuild icon cache if icons appear corrupted
+  </Accordion>
+</AccordionGroup>
+
+## Source Code
+
+Location: `/src/modules/NewPlus/`
+
+- Shell extension: `NewShellExtensionContextMenu/`
+- Constants and settings: `NewShellExtensionContextMenu/constants.h`
+- Template utilities: `NewShellExtensionContextMenu/new_utilities.cpp`

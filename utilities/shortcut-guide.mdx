@@ -1,0 +1,474 @@
+---
+title: Shortcut Guide
+description: An overlay that displays available Windows keyboard shortcuts when you press and hold the Windows key.
+---
+
+Shortcut Guide displays an overlay showing available Windows keyboard shortcuts when you press and hold the Windows key. Perfect for learning and remembering Windows shortcuts.
+
+## Activation
+
+<Steps>
+  <Step title="Press and Hold Win Key">
+    Press and hold the Windows key (`Win`) for the configured duration (default: 900ms).
+  </Step>
+  <Step title="View Shortcuts">
+    The overlay appears showing available shortcuts for the current context.
+  </Step>
+  <Step title="Execute Shortcut">
+    While holding Win, press any shown key to execute that shortcut.
+  </Step>
+  <Step title="Close Overlay">
+    Release the Windows key or press `Esc` to close the guide.
+  </Step>
+</Steps>
+
+<Note>
+  The guide only appears when you hold the Win key without pressing other keys. If you press another key immediately, the normal Windows shortcut executes instead.
+</Note>
+
+## How It Works
+
+### Activation Detection
+
+From source `/src/modules/ShortcutGuide/ShortcutGuide/shortcut_guide.cpp:90-116`:
+
+<CodeGroup>
+```cpp Windows Key Detection
+bool isWinPressed() {
+    return (GetAsyncKeyState(VK_LWIN) & 0x8000) || 
+           (GetAsyncKeyState(VK_RWIN) & 0x8000);
+}
+
+bool onlyWinPressed() {
+    if (!isWinPressed()) return false;
+    
+    // Check no other modifiers are pressed
+    for (auto key : modifierKeys) {
+        if (GetAsyncKeyState(key) & 0x8000)
+            return false;
+    }
+    return true;
+}
+```
+</CodeGroup>
+
+The guide uses a low-level keyboard hook to detect:
+- Windows key press and hold
+- No other modifier keys pressed (Shift, Ctrl, Alt)
+- Held for configured duration threshold
+
+### Window Context Detection
+
+Shortcut Guide intelligently detects the active window to show relevant shortcuts.
+
+From source `/src/modules/ShortcutGuide/ShortcutGuide/shortcut_guide.cpp:28-86`:
+
+<Accordion title="Window Eligibility">
+  The guide checks if shortcuts apply to the current window:
+  
+  **Excluded Windows:**
+  - Child windows (`WS_CHILD`)
+  - Disabled windows (`WS_DISABLED`)
+  - Tool windows (`WS_EX_TOOLWINDOW`)
+  - Non-activating windows (`WS_EX_NOACTIVATE`)
+  - System windows (Taskbar, Start Menu)
+  - Cortana/Search UI
+  
+  **Snappable Windows:**
+  Windows must have these styles to show snap shortcuts:
+  - `WS_MAXIMIZEBOX` - Can be maximized
+  - `WS_MINIMIZEBOX` - Can be minimized
+  - `WS_THICKFRAME` - Resizable
+</Accordion>
+
+## Displayed Shortcuts
+
+Shortcut Guide organizes shortcuts into categories:
+
+### Windows Snap Shortcuts
+
+<CardGroup cols={2}>
+  <Card title="Snap Left" icon="arrow-left">
+    `Win + ←` - Snap window to left half
+  </Card>
+  <Card title="Snap Right" icon="arrow-right">
+    `Win + →` - Snap window to right half
+  </Card>
+  <Card title="Maximize" icon="arrow-up">
+    `Win + ↑` - Maximize window
+  </Card>
+  <Card title="Minimize/Restore" icon="arrow-down">
+    `Win + ↓` - Minimize or restore window
+  </Card>
+</CardGroup>
+
+<Tabs>
+  <Tab title="Quarter Snapping">
+    Combine arrow keys for quarter-screen snap:
+    
+    - `Win + ←` then `Win + ↑` - Top-left quarter
+    - `Win + ←` then `Win + ↓` - Bottom-left quarter
+    - `Win + →` then `Win + ↑` - Top-right quarter
+    - `Win + →` then `Win + ↓` - Bottom-right quarter
+  </Tab>
+  
+  <Tab title="Multi-Monitor">
+    Move windows between monitors:
+    
+    - `Win + Shift + ←` - Move to left monitor
+    - `Win + Shift + →` - Move to right monitor
+  </Tab>
+</Tabs>
+
+<Note>
+  Snap shortcuts only appear when the active window supports snapping (has maximize/minimize/resize capabilities).
+</Note>
+
+### Desktop & Taskbar Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win + D` | Show/Hide desktop |
+| `Win + M` | Minimize all windows |
+| `Win + Home` | Minimize all except active window |
+| `Win + ,` | Peek at desktop |
+| `Win + T` | Cycle through taskbar apps |
+| `Win + [Number]` | Launch taskbar app at position |
+| `Win + B` | Focus system tray |
+
+### Virtual Desktop Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win + Ctrl + D` | Create new virtual desktop |
+| `Win + Ctrl + F4` | Close current desktop |
+| `Win + Ctrl + ←` | Switch to left desktop |
+| `Win + Ctrl + →` | Switch to right desktop |
+| `Win + Tab` | Open Task View |
+
+### System Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win + A` | Open Action Center |
+| `Win + S` | Open Search |
+| `Win + I` | Open Settings |
+| `Win + X` | Open Quick Link menu |
+| `Win + L` | Lock computer |
+| `Win + R` | Open Run dialog |
+| `Win + E` | Open File Explorer |
+| `Win + K` | Open Connect pane |
+| `Win + P` | Project display mode |
+| `Win + U` | Open Accessibility settings |
+| `Win + V` | Open Clipboard history |
+| `Win + .` or `Win + ;` | Open emoji picker |
+
+### Application Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Win + Shift + S` | Screenshot (Snipping Tool) |
+| `Win + PrtScn` | Full screenshot to Pictures |
+| `Win + G` | Open Xbox Game Bar |
+| `Win + Alt + R` | Record screen |
+| `Win + H` | Voice typing |
+| `Win + Shift + V` | Cycle notification focus |
+
+## Features
+
+### Visual Design
+
+<Accordion title="Overlay Appearance">
+  The Shortcut Guide overlay features:
+  
+  - Semi-transparent dark background
+  - Keyboard layout visualization
+  - Highlighted available shortcuts
+  - Action descriptions next to each key
+  - Theme-aware colors (light/dark mode)
+  - Smooth fade-in/fade-out animations
+  
+  Implementation: `/src/modules/ShortcutGuide/ShortcutGuide/overlay_window.cpp`
+</Accordion>
+
+### D2D Rendering
+
+Shortcut Guide uses Direct2D for smooth rendering:
+
+From source files:
+- SVG graphics: `/src/modules/ShortcutGuide/ShortcutGuide/d2d_svg.cpp`
+- Text rendering: `/src/modules/ShortcutGuide/ShortcutGuide/d2d_text.cpp`
+- Window rendering: `/src/modules/ShortcutGuide/ShortcutGuide/d2d_window.cpp`
+
+### Animation System
+
+<Accordion title="Smooth Animations">
+  Shortcut Guide includes an animation system for smooth appearance/disappearance:
+  
+  - Fade-in when Win key held
+  - Fade-out when released or Esc pressed
+  - Immediate response to Win key release
+  - Smooth transitions
+  
+  Implementation: `/src/modules/ShortcutGuide/ShortcutGuide/animation.cpp`
+</Accordion>
+
+### Keyboard Hook
+
+Low-level keyboard hook monitors key events:
+
+<CodeGroup>
+```cpp Hook Implementation
+LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == HC_ACTION) {
+        // ESC key closes overlay
+        if (event.lParam->vkCode == VK_ESCAPE) {
+            overlay_window_instance->CloseWindow(HideWindowType::ESC_PRESSED);
+        }
+        
+        // Win key release closes overlay
+        if (wasWinPressed && !isKeyDown(event) && isWin(event.lParam->vkCode)) {
+            overlay_window_instance->CloseWindow(HideWindowType::WIN_RELEASED);
+        }
+    }
+}
+```
+</CodeGroup>
+
+From `/src/modules/ShortcutGuide/ShortcutGuide/shortcut_guide.cpp:128-150`
+
+## Configuration
+
+### Press Duration
+
+<Steps>
+  <Step title="Open Settings">
+    Open PowerToys Settings > Shortcut Guide.
+  </Step>
+  <Step title="Adjust Duration">
+    Configure "Press duration before showing" (default: 900ms).
+    
+    - Shorter (500ms): Quick access, may activate accidentally
+    - Longer (1500ms): Deliberate activation, requires longer hold
+  </Step>
+  <Step title="Test">
+    Hold Win key to test the new duration.
+  </Step>
+</Steps>
+
+<Tip>
+  If you frequently activate Shortcut Guide accidentally, increase the duration. If you find it takes too long to appear, decrease it.
+</Tip>
+
+### Overlay Opacity
+
+Adjust background transparency:
+- Higher opacity: Easier to read, blocks more of screen
+- Lower opacity: Less obtrusive, can see through to content
+
+### Theme
+
+Shortcut Guide automatically adapts to Windows theme:
+- Light mode: Light background, dark text
+- Dark mode: Dark background, light text
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Learning Windows Shortcuts">
+    **For New Users:**
+    
+    - Discover available Windows shortcuts without searching documentation
+    - Learn keyboard-driven workflows gradually
+    - Reference guide always available with Win key hold
+    - Contextual shortcuts based on active window
+    
+    **Example:** New to Windows? Hold Win to learn snap shortcuts when resizing windows.
+  </Accordion>
+  
+  <Accordion title="Productivity Power Users">
+    **For Experts:**
+    
+    - Quick reference for less-common shortcuts
+    - Discover shortcuts you didn't know existed
+    - Verify exact key combinations
+    - Teach shortcuts to others by showing overlay
+    
+    **Example:** Demonstrate virtual desktop shortcuts to colleague by holding Win.
+  </Accordion>
+  
+  <Accordion title="Training & Support">
+    **For Trainers:**
+    
+    - Visual aid when teaching Windows
+    - Show available shortcuts during presentations
+    - Help users remember key combinations
+    - Reduce need for printed shortcut references
+    
+    **Example:** During training session, hold Win to show all window management shortcuts.
+  </Accordion>
+  
+  <Accordion title="Accessibility">
+    **For Accessible Workflows:**
+    
+    - Reduce reliance on mouse
+    - Discover keyboard alternatives to mouse actions
+    - Learn system-wide keyboard navigation
+    - Support for users with motor impairments
+    
+    **Example:** Learn keyboard-only window management without touching mouse.
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Features
+
+### Context-Aware Display
+
+Shortcut Guide intelligently shows/hides shortcuts based on window state:
+
+<Tabs>
+  <Tab title="Snappable Windows">
+    When active window supports snapping:
+    - Shows all snap shortcuts (arrows, maximize, minimize)
+    - Displays multi-monitor move shortcuts
+    - Shows quarter-snap combinations
+  </Tab>
+  
+  <Tab title="Non-Snappable Windows">
+    For windows that can't snap (e.g., Save dialogs):
+    - Hides snap shortcuts
+    - Shows only applicable system shortcuts
+    - Prevents confusion from non-functional shortcuts
+  </Tab>
+  
+  <Tab title="Desktop/Taskbar Focus">
+    When desktop or taskbar is active:
+    - Shows desktop-specific shortcuts
+    - Displays taskbar navigation
+    - Highlights virtual desktop commands
+  </Tab>
+</Tabs>
+
+From source `/src/modules/ShortcutGuide/ShortcutGuide/shortcut_guide.cpp:74-84`:
+
+```cpp
+result.snappable = ((style & WS_MAXIMIZEBOX) == WS_MAXIMIZEBOX) &&
+                   ((style & WS_MINIMIZEBOX) == WS_MINIMIZEBOX) &&
+                   ((style & WS_THICKFRAME) == WS_THICKFRAME);
+```
+
+### Start Visible Mode
+
+Shortcut Guide can launch in "always visible" mode for testing:
+
+Implementation: `/src/modules/ShortcutGuide/ShortcutGuide/start_visible.cpp`
+
+<Accordion title="Developer/Testing Mode">
+  When launched with start-visible flag:
+  - Overlay appears immediately on startup
+  - Stays visible without holding Win key
+  - Useful for testing visual changes
+  - Helpful for taking screenshots/documentation
+</Accordion>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Overlay Not Appearing">
+    **Checklist:**
+    - Ensure Shortcut Guide is enabled in PowerToys Settings
+    - Verify you're holding Win key (not just tapping)
+    - Check press duration setting isn't too long
+    - Don't press other keys while holding Win
+    - Ensure PowerToys is running
+    
+    **Common Issue:** Pressing Win + another key too quickly executes shortcut instead of showing guide.
+  </Accordion>
+  
+  <Accordion title="Shortcuts Not Working">
+    **Possible Causes:**
+    - Some shortcuts may be disabled by Group Policy
+    - Windows version may not support certain shortcuts
+    - Third-party software may override shortcuts
+    - Active window may not support specific shortcuts (e.g., snap)
+    
+    **Solution:** Test shortcuts shown in guide work without the overlay.
+  </Accordion>
+  
+  <Accordion title="Overlay Closes Immediately">
+    **Reasons:**
+    - Releasing Win key too quickly
+    - Another application capturing Win key
+    - Keyboard hardware sending multiple key events
+    - Press duration setting too short
+    
+    **Fix:** Increase press duration in settings to 1500ms for testing.
+  </Accordion>
+  
+  <Accordion title="Wrong Shortcuts Displayed">
+    **Context Issues:**
+    - Overlay shows shortcuts for detected window context
+    - Some applications may not be detected correctly
+    - System windows may show limited shortcuts
+    
+    **Verification:** Check if active window is expected type (snappable vs. non-snappable).
+  </Accordion>
+</AccordionGroup>
+
+## Performance
+
+### Resource Usage
+
+<Accordion title="System Impact">
+  Shortcut Guide is lightweight:
+  
+  - Minimal CPU usage when idle (keyboard hook only)
+  - Direct2D rendering for efficient graphics
+  - Quick overlay rendering (less than 16ms)
+  - Small memory footprint
+  - No background processing when not active
+</Accordion>
+
+### Hide Window Types
+
+From source, the overlay can be hidden via:
+
+```cpp
+enum HideWindowType {
+    ESC_PRESSED,    // User pressed Escape
+    WIN_RELEASED,   // User released Win key
+};
+```
+
+Implementation ensures immediate response to user input.
+
+## Keyboard Shortcuts Reference
+
+### Complete Shortcut List
+
+Shortcut Guide displays shortcuts from these categories:
+
+1. **Window Management** (when applicable)
+2. **Desktop & Taskbar** (always shown)
+3. **Virtual Desktops** (Windows 10+)
+4. **System Functions** (always shown)
+5. **Applications** (context-aware)
+
+<Tip>
+  The exact shortcuts shown vary by Windows version. Windows 11 may show additional shortcuts not available in Windows 10.
+</Tip>
+
+## Source Code
+
+Location: `/src/modules/ShortcutGuide/ShortcutGuide/`
+
+- Main logic: `shortcut_guide.cpp`
+- Overlay window: `overlay_window.cpp`
+- D2D rendering: `d2d_window.cpp`, `d2d_svg.cpp`, `d2d_text.cpp`
+- Animation: `animation.cpp`
+- Start visible mode: `start_visible.cpp`
+- Native event handling: `native_event_waiter.cpp`
+
+## Module Interface
+
+Documentation: `/src/modules/ShortcutGuide/ShortcutGuideModuleInterface/README.md`

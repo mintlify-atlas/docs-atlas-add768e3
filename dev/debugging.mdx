@@ -1,0 +1,435 @@
+---
+title: Debugging PowerToys
+description: Techniques and tools for debugging PowerToys modules, including Visual Studio setup, child process debugging, and troubleshooting
+---
+
+## Visual Studio Debugging Setup
+
+### Basic Debugging
+
+1. Open `PowerToys.slnx` in Visual Studio
+2. Set `runner` as the startup project:
+   - Right-click the `runner` project in Solution Explorer
+   - Select **Set as Startup Project**
+3. Select your build configuration (Debug/Release)
+4. Start debugging:
+   - Press `F5`, or
+   - Click **Local Windows Debugger**, or
+   - Menu: **Debug > Start Debugging**
+
+### Elevated Debugging
+
+Some PowerToys modules require elevated (administrator) privileges to function properly:
+
+- **FancyZones**: Cannot move elevated windows to zones without elevation
+- **Shortcut Guide**: Won't appear when elevated applications are in foreground
+
+**Recommendation:** Run Visual Studio as administrator when debugging these scenarios.
+
+<Tip>
+If you prefer not to run Visual Studio elevated, you can modify the UAC execution level:
+
+1. Open `runner` project properties
+2. Navigate to **Linker > Manifest File**
+3. Change **UAC Execution Level** from `highestAvailable` to `asInvoker`
+
+Note: This will limit functionality in some scenarios.
+</Tip>
+
+## Debugging Child Processes
+
+Many PowerToys modules run as separate processes launched by the runner. To debug these:
+
+### Using Debug Child Processes Extension
+
+1. **Install the extension:**
+   - [Debug Child Processes for VS 2022](https://marketplace.visualstudio.com/items?itemName=vsdbgplat.MicrosoftChildProcessDebuggingPowerTool2022)
+
+2. **Configure child process debugging:**
+   - Tools > Options > Child Process Debugging Settings
+   - Add process names to debug automatically
+   - Specify debugger type (.NET, Native, or Mixed)
+
+3. **Start debugging:**
+   - Start PowerToys from Visual Studio
+   - Extension automatically attaches to child processes
+
+### Manual Attach
+
+Alternatively, attach manually to running processes:
+
+1. Start PowerToys (with or without debugger)
+2. Press `Ctrl+Alt+P` in Visual Studio
+3. Search for your module's process name
+4. Select and attach
+
+**Common module processes:**
+- `PowerToys.AdvancedPaste.exe`
+- `ColorPickerUI.exe`
+- `PowerToys.Awake.exe`
+- `PowerToys.FancyZones.Editor.exe`
+- `PowerToys.PowerLauncher.exe`
+
+## Debugging Specific Components
+
+### Module Interface DLLs
+
+Module interface DLLs load directly into the runner process:
+
+1. Set breakpoints in the DLL code
+2. Start debugging the runner
+3. Breakpoints will hit automatically when the module loads
+
+**No special setup needed** - the DLL runs in the runner's process space.
+
+### Settings UI
+
+To debug the Settings application:
+
+1. Start PowerToys with debugging
+2. Open Settings from the system tray
+3. Attach to `PowerToys.Settings.exe` process
+4. Or use child process debugging extension
+
+**Settings logs location:**
+```
+%LOCALAPPDATA%\Microsoft\PowerToys\
+```
+
+### Color Picker Example
+
+Debug both native and managed code together:
+
+1. Set breakpoints in:
+   - ColorPicker module interface (native C++)
+   - ColorPickerUI (C# WinUI)
+2. Configure child process debugging for `ColorPickerUI.exe`
+3. Start runner with debugger
+4. Activate Color Picker with its hotkey
+5. Both breakpoints will hit appropriately
+
+### Short-Lived Processes
+
+For processes that start and exit quickly (like Workspaces apps):
+
+1. List all process names explicitly in child process debugging
+2. Set correct debugger type (.NET for C# processes)
+3. Set breakpoints early in the process lifecycle
+4. Consider adding debug delays in code during development:
+
+```csharp
+#if DEBUG
+    System.Threading.Thread.Sleep(5000); // Wait for debugger
+#endif
+```
+
+## Debugging with Logs
+
+### Log Locations
+
+**Runner and module logs:**
+```
+%LOCALAPPDATA%\Microsoft\PowerToys\Logs\
+```
+
+**Module-specific logs:**
+```
+%LOCALAPPDATA%\Microsoft\PowerToys\<ModuleName>\Logs\
+```
+
+**Low-privilege component logs** (preview handlers, thumbnails):
+```
+%USERPROFILE%\AppData\LocalLow\Microsoft\PowerToys\
+```
+
+### C++ Logging
+
+PowerToys uses [spdlog](https://github.com/gabime/spdlog) for C++ logging:
+
+```cpp
+#include <common/logger/logger.h>
+
+// Initialize logger (in main/DllMain)
+init_logger();
+
+// Log messages
+Logger::info("Module initialized");
+Logger::warn("Warning message");
+Logger::error("Error message: {}", errorDetails);
+```
+
+### C# Logging
+
+C# projects use the `Logger` class from `ManagedCommon`:
+
+```csharp
+using ManagedCommon;
+
+// Initialize logger (in Main or App constructor)
+Logger.InitializeLogger("\\FancyZones\\Editor\\Logs");
+
+// For low-privilege process
+Logger.InitializeLogger("\\FileExplorer\\Monaco\\Logs", isLocalLow: true);
+
+// Log messages
+Logger.LogInfo("Operation completed");
+Logger.LogWarning("Warning message");
+Logger.LogError("Error message");
+Logger.LogError("Error with exception", exception);
+Logger.LogDebug("Debug information");
+Logger.LogTrace(); // Logs current state
+```
+
+### Finding Issues in Logs
+
+Search for common error patterns:
+
+```
+ERROR
+Exception
+Failed
+Crash
+Terminated unexpectedly
+```
+
+Use log timestamps to correlate with user reports or telemetry data.
+
+## Debugging Tools
+
+### Windows Event Viewer
+
+For application crashes:
+
+1. Open Event Viewer: `eventvwr.msc`
+2. Navigate to: **Windows Logs > Application**
+3. Filter for:
+   - Source: Application Error
+   - Search for: PowerToys, module names
+4. Export crash XML for analysis
+
+### WinObj Tool
+
+For finding registered events and synchronization objects:
+
+1. Download [WinObj](https://docs.microsoft.com/sysinternals/downloads/winobj) from Sysinternals
+2. Run as administrator
+3. Search for event names used by modules
+4. Shows handles to events (typically runner and module)
+
+### Process Monitor
+
+For file, registry, and process activity:
+
+1. Download [Process Monitor](https://docs.microsoft.com/sysinternals/downloads/procmon)
+2. Filter for PowerToys processes
+3. Monitor:
+   - File operations
+   - Registry access
+   - Process creation
+
+### Visual Studio Diagnostic Tools
+
+While debugging:
+
+1. **Diagnostic Tools window** (Ctrl+Alt+F2):
+   - Memory usage
+   - CPU usage
+   - Events timeline
+
+2. **Performance Profiler** (Alt+F2):
+   - CPU Profiling
+   - Memory Profiling
+   - Database queries
+
+3. **Live Visual Tree** (Ctrl+Q, search "Live Visual Tree"):
+   - Inspect WinUI/UWP UI hierarchy
+   - View property values
+   - Debug layout issues
+
+## Debugging Scenarios
+
+### Bug Report Analysis
+
+When working with user bug reports:
+
+1. **Check module-specific logs** for exceptions or crashes
+2. **Copy user's settings** from Bug Report to your machine:
+   ```
+   %LOCALAPPDATA%\Microsoft\PowerToys\<ModuleName>\settings.json
+   ```
+3. **Review Event Viewer XML** files for crash details
+4. **Compare installation structure** with `installation_folder_structure.txt`
+5. **Check installer logs** for installation issues:
+   ```
+   %LOCALAPPDATA%\Temp\PowerToys_bootstrapper_*.log
+   %LOCALAPPDATA%\Temp\PowerToys_*.log
+   ```
+6. **Note Windows version and language** for environmental patterns
+
+### Installer Debugging
+
+The installer can only be built in Release mode:
+
+**Debug techniques:**
+- Add logging statements
+- Use message boxes for critical paths
+- Check installer logs:
+  ```
+  %LOCALAPPDATA%\Temp\PowerToys_bootstrapper_*.log (MSI tool logs)
+  %LOCALAPPDATA%\Temp\PowerToys_*.log (Custom installer logs)
+  ```
+
+**Common installer issues:**
+- Missing dependencies
+- File conflicts
+- Registry access issues
+- Elevation problems
+
+### DPI and Multi-Monitor Issues
+
+For testing DPI-related problems:
+
+1. Use at least 2 monitors with different DPI settings
+2. Test with:
+   - 100% (96 DPI)
+   - 125% (120 DPI)
+   - 150% (144 DPI)
+   - 200% (192 DPI)
+3. Test monitor arrangement changes
+4. Test disconnect/reconnect scenarios
+
+### Wake/Resume Issues
+
+Background modules often fail after sleep/wake:
+
+1. Add logging around:
+   - Event handle recreation
+   - Service restart logic
+   - Resource reinitialization
+
+2. Test scenarios:
+   - Sleep/wake cycle
+   - Hibernate/resume
+   - Monitor disconnect/reconnect
+   - Lock/unlock
+
+### Performance Issues
+
+For performance debugging:
+
+```csharp
+using System.Diagnostics;
+
+var stopwatch = Stopwatch.StartNew();
+// ... code to measure
+stopwatch.Stop();
+Logger.LogInfo($"Operation took {stopwatch.ElapsedMilliseconds}ms");
+```
+
+Search logs for stopwatch measurements:
+```
+findstr /i "stopwatch took ms" logs\*.log
+```
+
+## Build Error Troubleshooting
+
+### Corrupted Build State
+
+**Symptoms:** Missing files, asset errors, unexpected build failures
+
+**Solution:**
+
+```powershell
+# Clean artifacts
+.\tools\build\clean-artifacts.ps1
+
+# Rebuild
+.\tools\build\build.ps1
+```
+
+### NuGet Package Issues
+
+**Symptoms:** Package restore failures, missing references
+
+**Solution:**
+
+```powershell
+# Clear NuGet cache
+dotnet nuget locals all --clear
+
+# Restore packages
+.\tools\build\build-essentials.ps1
+```
+
+### Submodule Issues
+
+**Symptoms:** Missing dependencies from `deps\` folder
+
+**Solution:**
+
+```bash
+# Update all submodules
+git submodule update --init --recursive
+
+# Or force update
+git submodule update --init --recursive --force
+```
+
+## Testing in Isolated Environments
+
+### Windows Sandbox
+
+Test clean installations:
+
+1. Enable Windows Sandbox
+2. Copy installer to host folder shared with sandbox
+3. Install and test in clean environment
+
+### Fresh User Profile
+
+Simulate new user experience:
+
+```powershell
+# Delete PowerToys user data
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\Microsoft\PowerToys"
+
+# PowerToys will recreate settings on next launch
+```
+
+### Multiple Computers
+
+Some features require multiple physical machines:
+
+- **Mouse Without Borders**: Requires 2+ physical computers (not VMs)
+- **Multi-monitor utilities**: Test with various monitor configurations
+
+## Debugging Checklist
+
+Before reporting or fixing a bug:
+
+- [ ] Reproduced the issue consistently
+- [ ] Checked logs for errors or exceptions
+- [ ] Verified build is up-to-date
+- [ ] Tested in both elevated and non-elevated modes
+- [ ] Checked Event Viewer for crashes
+- [ ] Tested with clean user settings
+- [ ] Documented steps to reproduce
+- [ ] Identified which module is affected
+- [ ] Verified system meets requirements
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building" icon="hammer" href="/dev/building">
+    Learn how to build PowerToys from source
+  </Card>
+  <Card title="Testing" icon="flask" href="/dev/testing">
+    Write and run tests for your changes
+  </Card>
+  <Card title="Coding Style" icon="code" href="/dev/coding-style">
+    Follow PowerToys coding conventions
+  </Card>
+  <Card title="Creating New Utility" icon="plus" href="/dev/creating-new-utility">
+    Step-by-step guide to build a new utility
+  </Card>
+</CardGroup>

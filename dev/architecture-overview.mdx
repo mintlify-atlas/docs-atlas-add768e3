@@ -1,0 +1,462 @@
+---
+title: Architecture Overview
+description: Understanding the PowerToys architecture and system design
+---
+
+## Introduction
+
+PowerToys is a collection of Windows productivity utilities built around a modular plugin architecture. The system consists of a central runner application that loads and manages individual PowerToy modules, each implementing a standardized interface.
+
+## Core Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      PowerToys.exe                          │
+│                       (Runner)                              │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  • Module Loader                                   │    │
+│  │  • Hotkey Manager (Centralized KB Hook)           │    │
+│  │  • Tray Icon & UI                                 │    │
+│  │  • Settings Bridge                                │    │
+│  └────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ IPC (Named Pipes)
+                           │
+┌─────────────────────────────────────────────────────────────┐
+│                   Settings UI (WinUI 3)                     │
+│  • Configuration Interface                                  │
+│  • Module Settings Pages                                    │
+│  • JSON Schema Validation                                   │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ JSON Config Files
+                           ▼
+              %LOCALAPPDATA%\Microsoft\PowerToys\
+
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  Module DLLs     │  │  Module DLLs     │  │  Module DLLs     │
+│                  │  │                  │  │                  │
+│ FancyZones.dll   │  │ ColorPicker.dll  │  │ PowerRename.dll  │
+│ (implements      │  │ (implements      │  │ (implements      │
+│  PowertoyModule  │  │  PowertoyModule  │  │  PowertoyModule  │
+│  Iface)          │  │  Iface)          │  │  Iface)          │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+```
+
+## Module Types
+
+PowerToys supports four distinct module types, each designed for different interaction patterns:
+
+### 1. Simple Modules
+
+Modules entirely contained within the module interface DLL with no external UI.
+
+**Characteristics:**
+- Implements `PowertoyModuleIface` directly
+- No separate application process
+- Minimal memory footprint
+- Direct integration with runner
+
+**Example: Find My Mouse**
+
+```cpp
+// From src/modules/MouseUtils/FindMyMouse/dllmain.cpp
+class FindMyMouse : public PowertoyModuleIface
+{
+private:
+    bool m_enabled = false;
+    HotkeyEx m_hotkey;
+    FindMyMouseSettings m_findMyMouseSettings;
+    
+public:
+    virtual void enable() override {
+        m_enabled = true;
+        std::thread([=]() { 
+            FindMyMouseMain(m_hModule, m_findMyMouseSettings); 
+        }).detach();
+    }
+    
+    virtual void OnHotkeyEx() override {
+        HWND hwnd = GetSonarHwnd();
+        if (hwnd != nullptr) {
+            PostMessageW(hwnd, WM_PRIV_SHORTCUT, NULL, NULL);
+        }
+    }
+};
+
+extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+{
+    return new FindMyMouse();
+}
+```
+
+**Reference:** `src/modules/MouseUtils/FindMyMouse/dllmain.cpp`
+
+### 2. External Application Launchers
+
+Modules that start separate application processes for UI or complex operations.
+
+**Characteristics:**
+- Module interface DLL launches external executable
+- Communication via Named Pipes or Windows Events
+- Separate process lifecycle management
+- Can be WPF, WinUI3, or Win32 applications
+
+**Example: Color Picker**
+
+```cpp
+// From src/modules/colorPicker/ColorPicker/dllmain.cpp
+class ColorPicker : public PowertoyModuleIface
+{
+private:
+    HANDLE m_hProcess;
+    HANDLE m_hInvokeEvent;
+    
+    void launch_process() {
+        unsigned long powertoys_pid = GetCurrentProcessId();
+        std::wstring executable_args = std::to_wstring(powertoys_pid);
+        
+        SHELLEXECUTEINFOW sei{ sizeof(sei) };
+        sei.fMask = { SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI };
+        sei.lpFile = L"PowerToys.ColorPickerUI.exe";
+        sei.nShow = SW_SHOWNORMAL;
+        sei.lpParameters = executable_args.data();
+        
+        if (ShellExecuteExW(&sei)) {
+            m_hProcess = sei.hProcess;
+        }
+    }
+    
+public:
+    virtual bool on_hotkey(size_t hotkeyId) override {
+        if (m_enabled) {
+            if (!is_process_running()) {
+                launch_process();
+            }
+            SetEvent(m_hInvokeEvent);
+            return true;
+        }
+        return false;
+    }
+};
+```
+
+**Reference:** `src/modules/colorPicker/ColorPicker/dllmain.cpp`
+
+### 3. Context Handler Modules
+
+Shell extensions that integrate with Windows Explorer context menus.
+
+**Characteristics:**
+- COM-based shell extensions
+- Right-click context menu entries
+- Windows 11 integration via MSIX packaging
+- Registered/unregistered via enable/disable
+
+**Examples:**
+- **Power Rename** - Bulk file renaming from context menu
+- **Image Resizer** - Batch image resizing
+- **File Locksmith** - Shows what's using a file
+
+**Reference:** `src/modules/powerrename/dll/dllmain.cpp`
+
+### 4. Registry-Based Modules
+
+Modules that register Windows preview handlers and thumbnail providers.
+
+**Characteristics:**
+- Modify Windows registry during enable/disable
+- Preview handlers for File Explorer
+- Thumbnail providers for file icons
+- No active process running
+
+**Examples:**
+- **Monaco Preview** - Code file previews
+- **SVG Preview** - SVG file previews
+- **Markdown Preview** - Markdown file previews
+- **PDF Preview** - PDF file previews
+
+**Reference:** `src/modules/previewpane/powerpreview/dllmain.cpp`
+
+## Communication Patterns
+
+### Runner ↔ Settings UI
+
+Bi-directional JSON messages over Windows Named Pipes:
+
+```cpp
+// Runner sends to Settings UI
+current_settings_ipc->send(L"{\"ShowYourself\":\"Dashboard\"}");
+
+// Settings UI sends configuration to Runner
+ShellPage.DefaultSndMSGCallBack(message);
+```
+
+**Message Types:**
+- **ShowYourself** - Display Settings UI page
+- **Module Settings** - Configuration changes
+- **Restart Required** - Elevation or restart needed
+- **Update Available** - Update notification
+
+**Reference:** `doc/devdocs/core/runner.md:66-111`
+
+### Runner ↔ Modules
+
+Direct function calls via module interface:
+
+```cpp
+// Runner calls module methods
+module->enable();
+module->set_config(json_config);
+module->on_hotkey(hotkeyId);
+
+// Module reports settings
+module->get_config(buffer, buffer_size);
+```
+
+**Reference:** `src/modules/interface/powertoy_module_interface.h`
+
+### Settings UI ↔ Modules
+
+Indirect communication through Runner or file system:
+
+1. **Via Runner IPC** (Most modules)
+   - Settings UI → Runner (JSON via pipe)
+   - Runner → Module (`set_config` call)
+
+2. **Via File Watching** (PowerToys Run)
+   - Settings UI writes `settings.json`
+   - Module watches file for changes
+   - Module applies new settings
+
+3. **Via Shared Files** (Keyboard Manager)
+   - Named mutex for synchronization
+   - Shared `default.json` configuration
+   - Module creates file if missing
+
+**Reference:** `doc/devdocs/core/settings/communication-with-modules.md`
+
+## Build System
+
+PowerToys uses MSBuild with custom scripts and tooling:
+
+### Project Structure
+
+```
+PowerToys/
+├── src/
+│   ├── runner/              # Main PowerToys.exe
+│   ├── modules/             # Individual PowerToy modules
+│   │   ├── interface/       # PowertoyModuleIface definition
+│   │   ├── FancyZones/
+│   │   ├── ColorPicker/
+│   │   └── ...
+│   ├── settings-ui/         # Settings application
+│   └── common/              # Shared libraries
+│       ├── SettingsAPI/
+│       ├── interop/
+│       └── utils/
+├── tools/
+│   └── build/               # Build scripts
+└── installer/               # WiX installer projects
+```
+
+### Build Process
+
+**Prerequisites:**
+- Visual Studio 2022 17.4+ or Visual Studio 2026
+- Windows 10 1803+ SDK
+- Initialize submodules: `git submodule update --init --recursive`
+
+**Build Commands:**
+
+```powershell
+# First-time build / NuGet restore
+tools\build\build-essentials.cmd
+
+# Build current folder
+tools\build\build.cmd
+
+# Build with specific configuration
+build.ps1 -Platform x64 -Configuration Release
+```
+
+**Build Logs:**
+- `build.<config>.<platform>.errors.log` - Errors only
+- `build.<config>.<platform>.all.log` - Complete build log
+- `build.<config>.<platform>.trace.binlog` - MSBuild binary log
+
+**Reference:** `tools/build/BUILD-GUIDELINES.md`
+
+### Common Dependencies
+
+**C++ Modules:**
+- **SPD logs** - Centralized logging system
+- **C++/WinRT** - Windows Runtime APIs
+- **Common utilities** - `src/common/` folder
+- **Settings API** - `src/common/SettingsAPI/`
+
+**C# Modules:**
+- **Microsoft.PowerToys.Settings.UI.Library** - Settings utilities
+- **Common.UI** - WPF/WinForms dependencies
+- **Interop library** - C++/C# communication
+
+**Reference:** `doc/devdocs/core/architecture.md:35-42`
+
+## Resource Management
+
+### Localization
+
+**C++ Modules:**
+- Resource files (`.resx`) converted to `.rc` format
+- Use conversion tools before building
+- String resources in `.rc` files
+
+**WPF Applications:**
+- Use `.resx` files directly
+- Managed resource system
+
+**WinUI 3 Applications:**
+- Use `.resw` files
+- PRI (Package Resource Index) file generation
+- Must override default PRI names to avoid conflicts
+
+**Reference:** `doc/devdocs/core/architecture.md:43-55`
+
+### DLL Flattening
+
+The Runner flattens DLLs to ensure consistent versions:
+
+- All module DLLs copied to runner directory
+- WinUI 3 apps separated in `WinUI3Apps` folder
+- Prevents version conflicts between modules
+- Simplifies deployment
+
+**Reference:** `doc/devdocs/core/runner.md:18-19`
+
+## Group Policy Support
+
+Modules can be controlled via Group Policy Objects (GPO):
+
+```cpp
+virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+{
+    return powertoys_gpo::getConfiguredColorPickerEnabledValue();
+}
+```
+
+**Policy States:**
+- `gpo_rule_configured_enabled` - Force enabled
+- `gpo_rule_configured_disabled` - Force disabled
+- `gpo_rule_configured_not_configured` - User choice
+
+**Reference:** `doc/devdocs/core/settings/gpo-integration.md`
+
+## Telemetry and Logging
+
+### Logging
+
+**C++ Modules:**
+```cpp
+#include <common/logger/logger.h>
+#include <common/utils/logger_helper.h>
+
+LoggerHelpers::init_logger(MODULE_NAME, L"ModuleInterface", LogSettings::moduleName);
+Logger::trace("Operation started");
+Logger::error("Error occurred: {}", errorMessage);
+```
+
+**C# Modules:**
+```csharp
+using Microsoft.PowerToys.Settings.UI.Library;
+
+Logger.LogError("Error occurred");
+Logger.LogInfo("Operation completed");
+```
+
+### Telemetry
+
+```cpp
+virtual void send_settings_telemetry() override
+{
+    SetEvent(send_telemetry_event);
+}
+```
+
+Modules implement telemetry to track usage and settings:
+- Settings changes
+- Feature activation
+- Error conditions
+- Performance metrics
+
+**Reference:** `doc/devdocs/core/settings/telemetry.md`
+
+## Startup Sequence
+
+The Runner initialization follows this sequence:
+
+```cpp
+// From src/runner/main.cpp
+int runner(bool isProcessElevated, bool openSettings, ...) {
+    // 1. Initialize DPI awareness
+    DPIAware::EnableDPIAwarenessForThisProcess();
+    
+    // 2. Register trace provider
+    Trace::RegisterProvider();
+    
+    // 3. Load general settings
+    load_general_settings();
+    auto const settings = get_general_settings();
+    
+    // 4. Start tray icon
+    start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
+    
+    // 5. Initialize centralized keyboard hook
+    start_lowlevel_keyboard_hook();
+    
+    // 6. Load module interfaces
+    load_powertoys();
+    
+    // 7. Start enabled modules
+    for (auto& [name, module] : modules) {
+        if (module->is_enabled()) {
+            module->enable();
+        }
+    }
+    
+    // 8. Enter message loop
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    // 9. Cleanup on exit
+    for (auto& [name, module] : modules) {
+        module->disable();
+        module->destroy();
+    }
+    
+    return 0;
+}
+```
+
+**Reference:** `doc/devdocs/core/runner.md:24-35`, `src/runner/main.cpp:181-200`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runner Implementation" icon="gears" href="./runner">
+    Deep dive into the PowerToys Runner architecture
+  </Card>
+  <Card title="Module Interface" icon="plug" href="./module-interface">
+    Learn how to implement a PowerToys module
+  </Card>
+  <Card title="Settings System" icon="sliders" href="./settings-system">
+    Understand the settings architecture and IPC
+  </Card>
+  <Card title="Common Libraries" icon="book" href="../common-libraries">
+    Shared utilities and helper functions
+  </Card>
+</CardGroup>

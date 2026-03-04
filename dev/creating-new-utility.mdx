@@ -1,0 +1,896 @@
+---
+title: Creating a New PowerToys Utility
+description: End-to-end guide for building a new PowerToys module from scratch, including architecture, integration, and packaging
+---
+
+<Note>
+This guide covers the complete process of creating a new PowerToys utility. Follow each section in order for best results.
+</Note>
+
+## Overview
+
+A PowerToys module is a self-contained utility integrated into the PowerToys ecosystem. Modules can be:
+
+- **UI-only**: Standalone applications launched on-demand (e.g., ColorPicker)
+- **Background service**: Always-running services (e.g., Awake, LightSwitch)
+- **Hybrid**: Combination of UI and background logic (e.g., ShortcutGuide, FancyZones)
+- **C++/C# interop**: Mixed native and managed code (e.g., PowerRename)
+
+## Prerequisites
+
+Before starting:
+
+1. ✅ Complete the [Getting Started guide](/dev/building#initial-setup)
+2. ✅ Successfully build and run `PowerToys.slnx`
+3. ✅ Understand [debugging techniques](/dev/debugging)
+4. ✅ Familiarize yourself with [coding style](/dev/coding-style)
+
+**Optional:**
+- WiX v5 toolset (for building installer)
+- Multiple monitors (for testing multi-display utilities)
+
+## Planning Your Module
+
+### 1. Design Decisions
+
+Answer these questions before coding:
+
+| Question | Consider |
+|----------|----------|
+| **What does the module do?** | Clear, focused functionality |
+| **How does it start?** | On-demand, at startup, event-triggered? |
+| **Does it need UI?** | Settings only, main UI, both? |
+| **What's the lifecycle?** | Always running, launched temporarily? |
+| **What language?** | C++ (performance), C# (ease), or both? |
+| **Similar modules?** | Study existing modules with similar patterns |
+
+### 2. Study Similar Modules
+
+**UI-only modules:**
+- `ColorPicker` - Simple activation and UI
+- `PowerOCR` - On-demand text recognition
+- `MeasureTool` - Overlay-based measurement
+
+**Background services:**
+- `Awake` - Keep-alive service
+- `LightSwitch` - System theme monitor
+- `AlwaysOnTop` - Window state management
+
+**Hybrid modules:**
+- `FancyZones` - Service + editor UI
+- `ShortcutGuide` - Background + overlay
+- `Workspaces` - Complex UI + window management
+
+**C++/C# interop:**
+- `PowerRename` - Explorer extension + UI
+- `FileLocksmith` - Shell integration + UI
+- `ImageResizer` - Context menu + processing
+
+<Tip>
+Explore similar modules in `src/modules/` to understand patterns and best practices.
+</Tip>
+
+## Module Architecture
+
+### Folder Structure
+
+Create your module under `src/modules/`:
+
+```
+src/modules/YourModule/
+├── YourModule.sln                    # Module solution (optional)
+├── YourModuleModuleInterface/        # Required: Module interface DLL
+│   ├── dllmain.cpp
+│   ├── YourModuleModuleInterface.vcxproj
+│   └── resource.h
+├── YourModule/                       # Optional: Main service/app
+│   ├── YourModule.cpp
+│   ├── YourModule.vcxproj or .csproj
+│   └── Settings/
+├── YourModuleUI/                     # Optional: UI component
+│   ├── App.xaml.cs
+│   ├── MainWindow.xaml
+│   └── YourModuleUI.csproj
+└── Tests/                            # Recommended: Unit tests
+    ├── YourModule-UnitTests/
+    └── YourModule-UITests/
+```
+
+## Step 1: Create Module Interface
+
+The Module Interface is **required** - it's how PowerToys Runner communicates with your module.
+
+### Using the Project Template
+
+1. Use the [module template](https://github.com/microsoft/PowerToys/tree/main/tools/project_template):
+   ```powershell
+   cd tools\project_template
+   # Follow template instructions
+   ```
+
+2. Copy generated files to `src\modules\YourModule\YourModuleModuleInterface\`
+
+3. Update all GUIDs in project files
+
+4. Update namespaces and class names
+
+### Module Interface Structure
+
+Key components in `dllmain.cpp`:
+
+#### 1. Settings Structure
+
+```cpp
+struct ModuleSettings
+{
+    bool enabled = true;
+    std::wstring hotkey = L"";
+    int customValue = 100;
+    // Add your settings here
+};
+```
+
+#### 2. Module Class
+
+```cpp
+class YourModule : public PowertoyModuleIface
+{
+private:
+    bool m_enabled = false;
+    HANDLE m_hEvent = nullptr;
+    ModuleSettings m_settings;
+
+public:
+    YourModule()
+    {
+        init_settings();
+    }
+
+    ~YourModule()
+    {
+        if (m_hEvent)
+        {
+            CloseHandle(m_hEvent);
+        }
+    }
+
+    // Implement PowertoyModuleIface methods...
+};
+```
+
+#### 3. Required Methods
+
+**Module Identification:**
+```cpp
+virtual PCWSTR get_name() override
+{
+    return L"YourModule";
+}
+
+virtual PCWSTR get_key() override
+{
+    return L"YourModule"; // Must match everywhere
+}
+```
+
+**GPO Policy Support:**
+```cpp
+virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+{
+    return powertoys_gpo::getConfiguredYourModuleEnabledValue();
+}
+```
+
+<Warning>
+You must add your module to GPO settings in `src/common/GPOWrapper/GPOWrapper.cpp`
+</Warning>
+
+**Lifecycle Management:**
+```cpp
+virtual void enable() override
+{
+    m_enabled = true;
+    // Start your module's functionality
+    StartService();
+}
+
+virtual void disable() override
+{
+    m_enabled = false;
+    // Clean up resources
+    StopService();
+}
+
+virtual bool is_enabled() override
+{
+    return m_enabled;
+}
+
+virtual bool is_enabled_by_default() const override
+{
+    return false; // or true if enabled by default
+}
+```
+
+**Settings Management:**
+```cpp
+void init_settings()
+{
+    try
+    {
+        PowerToysSettings::PowerToyValues settings =
+            PowerToysSettings::PowerToyValues::load_from_settings_file(get_key());
+        
+        if (settings.is_bool_value(L"enabled"))
+        {
+            m_settings.enabled = settings.get_bool_value(L"enabled").value();
+        }
+        
+        // Load other settings...
+    }
+    catch (...)
+    {
+        // Use defaults
+    }
+}
+
+virtual bool get_config(wchar_t* buffer, int* buffer_size) override
+{
+    HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
+    
+    PowerToysSettings::Settings settings(hinstance, get_name());
+    settings.set_description(L"Description of your module");
+    
+    return settings.serialize_to_buffer(buffer, buffer_size);
+}
+
+virtual void set_config(const wchar_t* config) override
+{
+    try
+    {
+        auto settingsObject = json::JsonValue::Parse(config).GetObjectW();
+        
+        if (settingsObject.HasKey(L"enabled"))
+        {
+            m_settings.enabled = settingsObject.GetNamedBoolean(L"enabled");
+        }
+        
+        // Save settings...
+        save_settings();
+    }
+    catch (...)
+    {
+        Logger::error(L"Failed to parse settings");
+    }
+}
+```
+
+**Hotkey Support (optional):**
+```cpp
+virtual size_t get_hotkeys(Hotkey* hotkeys, size_t buffer_size) override
+{
+    if (m_hotkey.win && buffer_size >= 1)
+    {
+        hotkeys[0] = m_hotkey;
+        return 1;
+    }
+    return 0;
+}
+
+virtual bool on_hotkey(size_t hotkeyId) override
+{
+    if (m_enabled && hotkeyId == 0)
+    {
+        // Launch your module
+        LaunchUI();
+        return true;
+    }
+    return false;
+}
+```
+
+### Export Module
+
+At the end of `dllmain.cpp`:
+
+```cpp
+extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+{
+    return new YourModule();
+}
+```
+
+## Step 2: Register Module with Runner
+
+Your module must be registered in multiple locations:
+
+### 1. `src/runner/modules.h`
+
+Add to the module list:
+```cpp
+enum class PowertoyModule
+{
+    FancyZones,
+    ShortcutGuide,
+    // ... other modules
+    YourModule,  // Add here
+};
+```
+
+### 2. `src/runner/modules.cpp`
+
+Add module loading:
+```cpp
+const std::array<std::wstring_view, module_count> module_names = {
+    L"FancyZones",
+    L"ShortcutGuide",
+    // ... other modules
+    L"YourModule",  // Add here
+};
+
+const std::array<std::wstring_view, module_count> module_dlls = {
+    L"modules/FancyZones/fancyzones.dll",
+    L"modules/ShortcutGuide/ShortcutGuide.dll",
+    // ... other modules
+    L"modules/YourModule/YourModuleModuleInterface.dll",  // Add here
+};
+```
+
+### 3. `src/common/logger/logger.h`
+
+Add logging category:
+```cpp
+namespace LogSettings
+{
+    constexpr const wchar_t* fancyZonesLogPath = L"FancyZones\\Logs";
+    constexpr const wchar_t* shortcutGuideLogPath = L"ShortcutGuide\\Logs";
+    // ... other modules
+    constexpr const wchar_t* yourModuleLogPath = L"YourModule\\Logs";  // Add here
+}
+```
+
+### 4. `src/runner/settings_window.h` and `.cpp`
+
+Add to settings enumeration and mapping.
+
+<Tip>
+Search for an existing module name (e.g., "FancyZones") in these files to find all locations that need updates.
+</Tip>
+
+## Step 3: Build Module Service/UI
+
+This is the main functionality of your module.
+
+### C++ Service Example
+
+```cpp
+// YourModule.cpp
+#include <common/logger/logger.h>
+#include "Settings.h"
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
+{
+    LoggerHelpers::init_logger(L"YourModule", L"YourModule", LogSettings::yourModuleLogPath);
+    
+    Logger::info(L"YourModule starting...");
+    
+    // Initialize and run your service
+    ModuleSettings::instance().LoadSettings();
+    
+    // Main service loop
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    Logger::info(L"YourModule exiting...");
+    return 0;
+}
+```
+
+### C# WinUI App Example
+
+Create WinUI 3 Blank App project:
+
+```csharp
+// App.xaml.cs
+using Microsoft.UI.Xaml;
+using ManagedCommon;
+
+public partial class App : Application
+{
+    public App()
+    {
+        InitializeComponent();
+        
+        // Initialize logging
+        Logger.InitializeLogger("\\YourModule\\Logs");
+        Logger.LogInfo("YourModule UI starting");
+    }
+
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    {
+        m_window = new MainWindow();
+        m_window.Activate();
+    }
+
+    private Window m_window;
+}
+```
+
+```csharp
+// MainWindow.xaml.cs
+using Microsoft.UI.Xaml;
+using ManagedCommon;
+
+public sealed partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+        LoadSettings();
+    }
+
+    private void LoadSettings()
+    {
+        // Load from %LOCALAPPDATA%\Microsoft\PowerToys\YourModule\settings.json
+        var settingsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Microsoft", "PowerToys", "YourModule", "settings.json");
+        
+        // Parse and apply settings
+    }
+}
+```
+
+### Project Configuration
+
+Set the output path in your `.vcxproj` or `.csproj`:
+
+```xml
+<PropertyGroup>
+  <OutputPath>..\..\..\..\$(Platform)\$(Configuration)\YourModule\</OutputPath>
+  <TargetName>PowerToys.YourModule</TargetName>
+</PropertyGroup>
+```
+
+## Step 4: Settings Integration
+
+Integrate your module with PowerToys Settings UI.
+
+### 1. Create Settings Classes
+
+**`src/settings-ui/Settings.UI.Library/YourModuleProperties.cs`:**
+
+```csharp
+using System.Text.Json.Serialization;
+
+public class YourModuleProperties
+{
+    [JsonPropertyName("enabled")]
+    public bool IsEnabled { get; set; } = true;
+
+    [JsonPropertyName("hotkey")]
+    public HotkeySettings Hotkey { get; set; } = new HotkeySettings();
+
+    [JsonPropertyName("custom_value")]
+    public int CustomValue { get; set; } = 100;
+}
+```
+
+**`src/settings-ui/Settings.UI.Library/YourModuleSettings.cs`:**
+
+```csharp
+using System.Text.Json.Serialization;
+
+public class YourModuleSettings : BasePTModuleSettings
+{
+    public const string ModuleName = "YourModule";
+
+    [JsonPropertyName("properties")]
+    public YourModuleProperties Properties { get; set; }
+
+    public YourModuleSettings()
+    {
+        Name = ModuleName;
+        Version = "1.0";
+        Properties = new YourModuleProperties();
+    }
+}
+```
+
+### 2. Create ViewModel
+
+**`src/settings-ui/Settings.UI/ViewModels/YourModuleViewModel.cs`:**
+
+```csharp
+using Microsoft.PowerToys.Settings.UI.Library;
+using Settings.UI.Library;
+
+public class YourModuleViewModel : Observable
+{
+    private YourModuleSettings Settings { get; set; }
+    private GeneralSettings GeneralSettings { get; set; }
+
+    public YourModuleViewModel(ISettingsUtils settingsUtils, ISettingsRepository<GeneralSettings> generalSettings)
+    {
+        // Load settings
+        Settings = settingsUtils.GetSettingsOrDefault<YourModuleSettings>(YourModuleSettings.ModuleName);
+        GeneralSettings = generalSettings.SettingsConfig;
+    }
+
+    public bool IsEnabled
+    {
+        get => Settings.Properties.IsEnabled;
+        set
+        {
+            if (Settings.Properties.IsEnabled != value)
+            {
+                Settings.Properties.IsEnabled = value;
+                OnPropertyChanged();
+                SaveSettings();
+            }
+        }
+    }
+
+    private void SaveSettings()
+    {
+        var settingsUtils = new SettingsUtils();
+        settingsUtils.SaveSettings(Settings.ToJsonString(), YourModuleSettings.ModuleName);
+        
+        // Notify runner
+        NotifyPropertyChanged();
+    }
+}
+```
+
+### 3. Create Settings Page
+
+**`src/settings-ui/Settings.UI/SettingsXAML/Views/YourModulePage.xaml`:**
+
+```xaml
+<Page
+    x:Class="Microsoft.PowerToys.Settings.UI.Views.YourModulePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls">
+
+    <controls:SettingsPageControl
+        x:Uid="YourModule"
+        ModuleImageSource="ms-appx:///Assets/Modules/YourModule.png">
+        
+        <controls:SettingsPageControl.ModuleContent>
+            <StackPanel Orientation="Vertical">
+                
+                <!-- Enable toggle -->
+                <controls:SettingsGroup x:Uid="YourModule_Enable">
+                    <controls:SettingsCard>
+                        <ToggleSwitch
+                            x:Uid="YourModule_EnableToggle"
+                            IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                    </controls:SettingsCard>
+                </controls:SettingsGroup>
+
+                <!-- Additional settings -->
+                <controls:SettingsGroup x:Uid="YourModule_Settings">
+                    <controls:SettingsCard x:Uid="YourModule_CustomValue">
+                        <Slider
+                            Value="{x:Bind ViewModel.CustomValue, Mode=TwoWay}"
+                            Minimum="0"
+                            Maximum="200" />
+                    </controls:SettingsCard>
+                </controls:SettingsGroup>
+
+            </StackPanel>
+        </controls:SettingsPageControl.ModuleContent>
+    </controls:SettingsPageControl>
+</Page>
+```
+
+### 4. Add Resource Strings
+
+**`src/settings-ui/Settings.UI/Strings/en-us/Resources.resw`:**
+
+```xml
+<data name="YourModule.Header" xml:space="preserve">
+  <value>Your Module</value>
+</data>
+<data name="YourModule.Description" xml:space="preserve">
+  <value>Description of what your module does</value>
+</data>
+<data name="YourModule_EnableToggle.Header" xml:space="preserve">
+  <value>Enable Your Module</value>
+</data>
+<data name="YourModule_CustomValue.Header" xml:space="preserve">
+  <value>Custom Setting</value>
+</data>
+```
+
+## Step 5: OOBE Page
+
+Create Out-of-Box Experience page for new users.
+
+**`src/settings-ui/Settings.UI/SettingsXAML/OOBE/Views/OobeYourModule.xaml`:**
+
+```xaml
+<Page
+    x:Class="Microsoft.PowerToys.Settings.UI.OOBE.Views.OobeYourModule"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel Orientation="Vertical" Spacing="16">
+        <TextBlock
+            x:Uid="Oobe_YourModule_Title"
+            Style="{StaticResource OobeTitleStyle}" />
+        
+        <TextBlock
+            x:Uid="Oobe_YourModule_Description"
+            Style="{StaticResource OobeDescriptionStyle}" />
+
+        <Image
+            Source="ms-appx:///Assets/Modules/YourModule.gif"
+            MaxHeight="400" />
+    </StackPanel>
+</Page>
+```
+
+**Add to `src/settings-ui/Settings.UI/OOBE/Enums/PowerToysModules.cs`:**
+
+```csharp
+public enum PowerToysModules
+{
+    Overview = 0,
+    FancyZones,
+    // ... other modules
+    YourModule,  // Add here
+}
+```
+
+## Step 6: Installer Integration
+
+Add your module to the WiX installer.
+
+### 1. Create WiX Component File
+
+**`installer/PowerToysInstallerVNext/YourModule.wxs`:**
+
+```xml
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <ComponentGroup Id="YourModuleComponentGroup" Directory="INSTALLFOLDER">
+      <!--YourModuleFiles_Component_Def-->
+    </ComponentGroup>
+  </Fragment>
+</Wix>
+```
+
+### 2. Update Product.wxs
+
+**`installer/PowerToysInstallerVNext/Product.wxs`:**
+
+Add to `<Feature Id="CoreFeature">`:
+
+```xml
+<ComponentGroupRef Id="YourModuleComponentGroup" />
+```
+
+### 3. Update File Generation Script
+
+**`installer/PowerToysInstallerVNext/generateFileComponents.ps1`:**
+
+Add at the end:
+
+```powershell
+# Your Module
+Generate-FileList -fileDepsJson "" -fileListName YourModuleFiles -wxsFilePath $PSScriptRoot\YourModule.wxs -depsPath "$PSScriptRoot..\..\..\$platform\Release\YourModule"
+Generate-FileComponents -fileListName "YourModuleFiles" -wxsFilePath $PSScriptRoot\YourModule.wxs -regroot $registryroot
+```
+
+## Step 7: Build and Test
+
+### Build Your Module
+
+```powershell
+# Build module interface and service
+cd src\modules\YourModule
+..\..\..\tools\build\build.ps1 -Configuration Debug
+
+# Build entire solution
+cd ..\..\..  # Back to root
+.\tools\build\build.ps1 -Configuration Debug
+```
+
+### Debug Your Module
+
+1. Set `runner` as startup project
+2. Start debugging (`F5`)
+3. Enable your module in Settings
+4. Attach to your module's process:
+   - Press `Ctrl+Alt+P`
+   - Search for `PowerToys.YourModule.exe`
+   - Attach debugger
+
+See [Debugging Guide](/dev/debugging) for details.
+
+### Test Scenarios
+
+- [ ] Module appears in Settings UI
+- [ ] Enable/disable works correctly
+- [ ] Settings persist after restart
+- [ ] Hotkey activation works (if applicable)
+- [ ] Module starts with PowerToys
+- [ ] Module logs correctly
+- [ ] No crashes or memory leaks
+- [ ] Works in elevated and non-elevated modes
+- [ ] OOBE page displays correctly
+
+## Step 8: Testing
+
+Write comprehensive tests for your module.
+
+### Unit Tests
+
+Create test project: `src/modules/YourModule/Tests/YourModule-UnitTests/`
+
+See [Testing Guide](/dev/testing#unit-tests) for details.
+
+### UI Tests
+
+Create UI test project: `src/modules/YourModule/Tests/YourModule-UITests/`
+
+See [Testing Guide](/dev/testing#ui-tests) for details.
+
+### Fuzz Tests (if applicable)
+
+If your module handles file I/O or user input, implement fuzz tests.
+
+See [Testing Guide](/dev/testing#fuzz-tests) for details.
+
+## Step 9: Documentation
+
+### Developer Documentation
+
+Create `doc/devdocs/modules/your-module.md`:
+
+```markdown
+# Your Module
+
+## Overview
+Brief description of what the module does.
+
+## Architecture
+- Module interface: How it integrates with runner
+- Service: Main functionality
+- UI: User interface components
+
+## Key Files
+- `YourModuleModuleInterface.dll` - Runner interface
+- `PowerToys.YourModule.exe` - Main service
+- Settings integration files
+
+## Building
+Special build instructions if any.
+
+## Testing
+How to test the module.
+
+## Known Issues
+Any known limitations or issues.
+```
+
+### User Documentation
+
+The PowerToys team will create Microsoft Learn documentation for users.
+
+## Common Pitfalls
+
+### Module Not Loading
+
+**Symptoms:** Module doesn't appear in Settings
+
+**Check:**
+- [ ] Module registered in `modules.h` and `modules.cpp`
+- [ ] DLL path correct in `module_dlls` array
+- [ ] Module key matches everywhere
+- [ ] Module interface exports `powertoy_create()` correctly
+
+### Settings Not Persisting
+
+**Symptoms:** Settings reset after restart
+
+**Check:**
+- [ ] Settings saved to correct path: `%LOCALAPPDATA%\Microsoft\PowerToys\YourModule\settings.json`
+- [ ] JSON serialization correct
+- [ ] Settings loaded in `init_settings()`
+- [ ] File watcher implemented for settings changes
+
+### Module Crashes Runner
+
+**Symptoms:** PowerToys crashes when module loads
+
+**Check:**
+- [ ] No exceptions in module constructor
+- [ ] Proper error handling in interface methods
+- [ ] Resources cleaned up in destructor
+- [ ] No memory leaks
+- [ ] Logs show error details
+
+### Hotkey Not Working
+
+**Symptoms:** Hotkey doesn't activate module
+
+**Check:**
+- [ ] Hotkey parsed correctly in settings
+- [ ] `get_hotkeys()` returns correct hotkey
+- [ ] `on_hotkey()` handles activation
+- [ ] Module is enabled
+- [ ] No conflicting hotkeys
+
+## Checklist
+
+Before submitting your module:
+
+### Code Complete
+- [ ] Module interface implemented
+- [ ] Service/UI implemented
+- [ ] Settings integration complete
+- [ ] OOBE page created
+- [ ] Installer integration done
+- [ ] Tests written and passing
+- [ ] Documentation created
+
+### Quality
+- [ ] Code follows [style guidelines](/dev/coding-style)
+- [ ] No hardcoded strings (use resources)
+- [ ] Proper error handling
+- [ ] Logging implemented
+- [ ] No memory leaks
+- [ ] Thread-safe where needed
+
+### Testing
+- [ ] Builds successfully
+- [ ] Unit tests pass
+- [ ] UI tests pass (if applicable)
+- [ ] Fuzz tests implemented (if handling file I/O)
+- [ ] Tested in Debug and Release
+- [ ] Tested elevated and non-elevated
+- [ ] Tested on multiple monitors (if applicable)
+- [ ] Tested clean install
+
+### Integration
+- [ ] Registered in runner
+- [ ] GPO support added
+- [ ] Settings UI complete
+- [ ] OOBE page works
+- [ ] Installer includes module
+- [ ] Telemetry events defined
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building" icon="hammer" href="/dev/building">
+    Build your module and PowerToys
+  </Card>
+  <Card title="Debugging" icon="bug" href="/dev/debugging">
+    Debug your module effectively
+  </Card>
+  <Card title="Testing" icon="flask" href="/dev/testing">
+    Write comprehensive tests
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/community/contributing">
+    Submit your module via pull request
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you need assistance:
+
+1. Check existing modules for examples
+2. Review [developer documentation](https://github.com/microsoft/PowerToys/tree/main/doc/devdocs)
+3. [Open an issue](https://github.com/microsoft/PowerToys/issues/new/choose) with tag `Needs-Team-Response`
+4. Join discussions in the PowerToys repository
+
+**Thank you for contributing to PowerToys!** 🎉

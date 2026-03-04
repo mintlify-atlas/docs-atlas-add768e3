@@ -1,0 +1,158 @@
+---
+title: Mouse Jump
+description: Quickly teleport your mouse cursor across long distances or multiple monitors
+---
+
+## Overview
+
+Mouse Jump provides a fast way to move your cursor across large distances by displaying a preview of all your screens. Click anywhere on the preview to instantly teleport your mouse to that location.
+
+<Note>
+  Mouse Jump is particularly useful when working with multiple monitors or ultra-wide displays where moving the cursor manually takes time.
+</Note>
+
+## How to Activate
+
+Press the activation shortcut to display the Mouse Jump preview:
+
+- **Default shortcut:** <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd>
+
+<Steps>
+  <Step title="Activate Mouse Jump">
+    Press <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> to open the preview overlay
+  </Step>
+  <Step title="View Preview">
+    A scaled-down preview of all your monitors appears showing the current cursor position
+  </Step>
+  <Step title="Click to Jump">
+    Click anywhere on the preview to instantly move your cursor to that location
+  </Step>
+  <Step title="Cancel">
+    Press <kbd>Esc</kbd> or click outside the preview to cancel without moving the cursor
+  </Step>
+</Steps>
+
+## Configuration Options
+
+<ParamField path="activation_shortcut" type="hotkey" default="Win + Shift + D">
+  Keyboard shortcut to open the Mouse Jump preview
+</ParamField>
+
+## Features
+
+### Multi-Monitor Support
+
+Mouse Jump displays a preview of all connected displays in their actual arrangement, making it easy to:
+- Navigate between monitors with different orientations
+- Jump to specific monitors in complex setups
+- Target precise locations across multiple screens
+
+### Preview Display
+
+The preview overlay shows:
+- Miniature representation of all monitors
+- Current cursor position indicator
+- Relative screen positions and arrangements
+- Clickable surface for instant cursor teleportation
+
+### High DPI Support
+
+Mouse Jump automatically adapts to:
+- Different DPI settings per monitor
+- Mixed DPI configurations
+- Scaling factors for accurate cursor placement
+
+## Use Cases
+
+### Multi-Monitor Workflows
+
+Quickly navigate between monitors without dragging your cursor across screens.
+
+```
+Scenario: Working with 3 monitors arranged horizontally
+Action: Press Win + Shift + D, click on right monitor
+Result: Cursor instantly appears on the right screen
+```
+
+### Large Display Navigation
+
+On ultra-wide or 4K displays, jump to distant UI elements without multiple mouse movements.
+
+<Tip>
+  Mouse Jump is faster than manually dragging the cursor, especially for distances greater than 2000 pixels.
+</Tip>
+
+### Productivity Enhancement
+
+Combine Mouse Jump with other keyboard shortcuts to:
+- Quickly access taskbar buttons on distant monitors
+- Jump to specific windows or applications
+- Navigate between virtual desktops with cursor positioning
+
+### Remote Desktop Sessions
+
+When controlling remote systems with multiple monitors, Mouse Jump helps navigate the remote desktop layout efficiently.
+
+## Technical Details
+
+### Process Architecture
+
+Mouse Jump runs as a separate process (`PowerToys.MouseJumpUI.exe`) that:
+- Launches on demand when the hotkey is pressed
+- Captures screen layouts using Windows Display APIs
+- Creates a scaled preview overlay
+- Handles cursor position calculations with DPI awareness
+
+### Performance Characteristics
+
+- **Activation time:** < 200ms on modern systems
+- **Preview rendering:** Hardware-accelerated via DirectX
+- **Memory usage:** Minimal when inactive (process suspended)
+- **CPU impact:** Negligible (event-driven architecture)
+
+### Coordinate Mapping
+
+Mouse Jump uses precise coordinate transformation to:
+1. Map physical display positions to preview coordinates
+2. Scale click positions back to screen coordinates
+3. Account for DPI scaling factors
+4. Handle negative coordinate spaces (monitors positioned left/above primary)
+
+## Keyboard Shortcuts Summary
+
+| Action | Shortcut |
+|--------|----------|
+| Open Mouse Jump | <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> (customizable) |
+| Cancel | <kbd>Esc</kbd> |
+| Jump to location | Click on preview |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Preview doesn't show all monitors">
+    - Check that all monitors are recognized by Windows (Settings > Display)
+    - Ensure displays are enabled (not disabled in display settings)
+    - Try disconnecting and reconnecting problematic displays
+  </Accordion>
+  
+  <Accordion title="Cursor position is inaccurate after jump">
+    - Verify DPI scaling settings are consistent
+    - Check for mixed DPI configurations
+    - Ensure display arrangement in Windows matches physical setup
+  </Accordion>
+  
+  <Accordion title="Mouse Jump doesn't activate">
+    - Confirm PowerToys is running
+    - Check that Mouse Jump is enabled in PowerToys Settings
+    - Verify no other application is using the same hotkey
+    - Review GPO policy settings (may be disabled by administrator)
+  </Accordion>
+</AccordionGroup>
+
+## Source Code Reference
+
+The Mouse Jump implementation can be found at:
+- Module interface: `src/modules/MouseUtils/MouseJump/dllmain.cpp`
+- UI application: `src/modules/MouseUtils/MouseJumpUI/Program.cs`
+- Main form: `src/modules/MouseUtils/MouseJumpUI/MainForm.cs`
+- Default hotkey: Line 102 in dllmain.cpp (Win + Shift + D)

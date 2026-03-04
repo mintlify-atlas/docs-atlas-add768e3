@@ -1,0 +1,390 @@
+---
+title: Contributing to PowerToys
+description: Learn how to contribute code, documentation, and translations to Microsoft PowerToys
+---
+
+## Overview
+
+PowerToys welcomes contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or helping with translations, your contributions make PowerToys better for everyone.
+
+Before you start contributing, please read this guide to understand our process and expectations.
+
+## Getting Started
+
+### Before You Begin
+
+Please follow this important rule to ensure efficient collaboration:
+
+<Warning>
+If you have a question, think you've discovered an issue, or would like to propose a new feature, please find/file an issue **BEFORE** starting work to fix/implement it.
+</Warning>
+
+This helps:
+- Avoid duplicate work
+- Ensure alignment with project goals
+- Get early feedback on your approach
+- Prevent wasted effort
+
+### Finding Issues to Work On
+
+1. **Browse existing issues**: Check the [GitHub issues](https://github.com/microsoft/PowerToys/issues) page
+2. **Look for "Help Wanted" label**: Visit [Issues labeled Help Wanted](https://github.com/microsoft/PowerToys/labels/Help%20Wanted)
+3. **Comment before starting**: Post on the ["Would you like to contribute to PowerToys?"](https://github.com/microsoft/PowerToys/issues/28769) thread
+
+### Indicating Interest
+
+To show which issues are important to you:
+- Click the [+😊] button and the 👍 icon on the issue
+- Avoid comments like "+1" or "me too" (they create noise)
+
+## Types of Contributions
+
+### Code Contributions
+
+Contribute bug fixes, new features, or improvements to existing utilities.
+
+**Process:**
+1. File or find an issue describing the problem
+2. Discuss the approach with the team
+3. Get approval before writing code
+4. Submit a pull request
+
+### Documentation
+
+Help improve guides, tutorials, and API documentation.
+
+**What you can do:**
+- Fix typos and clarify existing docs
+- Add examples and tutorials
+- Improve developer documentation
+- Update outdated information
+
+### Translations
+
+<Note>
+Localization is handled exclusively by Microsoft's internal localization team. Community PRs for translations are not accepted.
+</Note>
+
+If you find translation issues:
+1. File an issue using the [translation issue template](https://github.com/microsoft/PowerToys/issues/new?template=translation_issue.yml)
+2. Include the incorrect text and suggested correction
+3. Specify the language and utility affected
+
+## Development Setup
+
+### Prerequisites
+
+- **Operating System**: Windows 10 April 2018 Update (version 1803) or newer
+- **Visual Studio**: Visual Studio 2026 (recommended) or Visual Studio 2022 17.4+
+- **Required Workloads**:
+  - Desktop Development with C++
+  - WinUI application development
+  - .NET desktop development
+  - Windows 10 SDK (10.0.22621.0)
+  - Windows 11 SDK (10.0.26100.3916)
+- **.NET 8 SDK**
+- **Long paths enabled** in Windows
+
+<Tip>
+You can automatically install Visual Studio with all required workloads using WinGet:
+
+```powershell
+winget configure .config\configuration.winget
+```
+
+Pick the configuration file matching your VS edition (e.g., `configuration.vsProfessional.winget`).
+</Tip>
+
+### Setting Up Your Development Environment
+
+<Steps>
+  <Step title="Fork and Clone">
+    1. Fork the [PowerToys repository](https://github.com/microsoft/PowerToys) on GitHub
+    2. Clone your fork locally:
+    
+    ```bash
+    git clone https://github.com/YOUR-USERNAME/PowerToys.git
+    cd PowerToys
+    ```
+  </Step>
+  
+  <Step title="Run Setup Script">
+    Run the automated setup script (recommended):
+    
+    ```powershell
+    .\tools\build\setup-dev-environment.ps1
+    ```
+    
+    This script will:
+    - Enable Windows long path support (requires admin)
+    - Enable Windows Developer Mode (requires admin)
+    - Install required Visual Studio components
+    - Initialize git submodules
+  </Step>
+  
+  <Step title="Manual Setup (Alternative)">
+    If you prefer manual setup:
+    
+    1. Open `PowerToys.slnx` in Visual Studio
+    2. Install extra components if prompted
+    3. Initialize submodules:
+    
+    ```bash
+    git submodule update --init --recursive
+    ```
+  </Step>
+</Steps>
+
+### Building PowerToys
+
+#### Using Visual Studio
+
+1. Open `PowerToys.slnx` in Visual Studio
+2. Select `Release` or `Debug` from the Solution Configuration dropdown
+3. Press `Ctrl+Shift+B` or select **Build > Build Solution**
+4. Find binaries in `x64\Release\` or `x64\Debug\`
+
+<Note>
+Some modules (PowerRename, ImageResizer, File Explorer extensions) require building and installing the full installer to function properly.
+</Note>
+
+#### Using Command Line
+
+PowerToys provides build scripts in `tools\build\`:
+
+```powershell
+# Build the full solution
+.\tools\build\build.ps1
+
+# Build with specific configuration
+.\tools\build\build.ps1 -Platform x64 -Configuration Release
+
+# Build only essential projects (faster iteration)
+.\tools\build\build-essentials.ps1
+
+# Build everything including installer (Release only)
+.\tools\build\build-installer.ps1
+```
+
+### Running Tests
+
+<Steps>
+  <Step title="Build Test Projects">
+    Build test projects before running them:
+    
+    ```powershell
+    # Navigate to test project directory
+    cd src/modules/[module-name]/[module-name].UnitTests
+    
+    # Build the test project
+    ..\..\..\..\tools\build\build.ps1
+    ```
+  </Step>
+  
+  <Step title="Run Tests">
+    Use Visual Studio Test Explorer:
+    - Press `Ctrl+E, T` to open Test Explorer
+    - Click "Run All" to execute tests
+    
+    Or use `vstest.console.exe` from command line
+  </Step>
+  
+  <Step title="UI Tests (Optional)">
+    For UI testing:
+    1. Install [WinAppDriver v1.2.1](https://github.com/microsoft/WinAppDriver/releases/tag/v1.2.1)
+    2. Enable Developer Mode in Windows Settings
+    3. Run UI test projects from Test Explorer
+  </Step>
+</Steps>
+
+<Warning>
+Avoid using `dotnet test` in this repository. Use Visual Studio Test Explorer or `vstest.console.exe` instead.
+</Warning>
+
+## Pull Request Guidelines
+
+### Before Submitting a PR
+
+<Accordion title="PR Preparation Checklist">
+  <AccordionGroup>
+    <Accordion title="1. Ensure Builds Succeed">
+      - Build locally with no errors
+      - Verify exit code is 0
+      - Check `build.<config>.<platform>.errors.log` for issues
+    </Accordion>
+    
+    <Accordion title="2. Test Your Changes">
+      - Add or update unit tests
+      - Run all relevant tests locally
+      - Verify functionality manually
+      - Test on different Windows versions if applicable
+    </Accordion>
+    
+    <Accordion title="3. Follow Coding Standards">
+      - Match existing code style
+      - Follow [coding guidelines](/community/contributing#coding-guidelines)
+      - Add XML documentation for public APIs
+      - Use meaningful variable names
+    </Accordion>
+    
+    <Accordion title="4. Update Documentation">
+      - Update relevant README files
+      - Add inline code comments for complex logic
+      - Update developer docs if needed
+    </Accordion>
+  </AccordionGroup>
+</Accordion>
+
+### PR Template Requirements
+
+When opening a PR, complete the following sections:
+
+- **Summary**: Brief description of changes
+- **Closes**: Link to related issue(s)
+- **Communication**: Confirm discussion with core contributors
+- **Tests**: Indicate tests added/updated and passing
+- **Localization**: Confirm localizable strings
+- **Dev docs**: Note documentation updates
+- **Validation**: Describe how you tested the changes
+
+### PR Process
+
+<Steps>
+  <Step title="Open Draft PR (Optional)">
+    For early feedback, open a draft PR with `[WIP]` or `[Draft]` in the title.
+  </Step>
+  
+  <Step title="Mark Ready for Review">
+    When ready for formal review, mark the PR as "Ready for Review".
+  </Step>
+  
+  <Step title="Respond to Feedback">
+    Address reviewer comments and update your PR. This may take several cycles.
+  </Step>
+  
+  <Step title="Approval and Merge">
+    Once approved:
+    - PR author merges their own PR
+    - For community contributors, reviewer may merge
+    - Use "Squash and merge" (default)
+    - Use "Rebase and merge" if commits should remain separate
+  </Step>
+</Steps>
+
+### Linking Issues
+
+Use [closing keywords](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword) in your PR description:
+
+```markdown
+Closes #1234
+Fixes #5678
+```
+
+## Coding Guidelines
+
+### General Principles
+
+- **Follow existing patterns**: Match the style of surrounding code
+- **Package functionality**: Create well-defined library interfaces
+- **Use classes**: Organize code into classes with clear responsibilities
+- **Add tests**: Include unit tests for new functionality
+
+### Code Style
+
+PowerToys follows specific style conventions:
+
+- **C++**: Follow Microsoft style with 4-space indentation
+- **C#**: Use .NET conventions with PascalCase for public members
+- **XAML**: Use consistent spacing and naming
+
+See the [coding style guide](https://github.com/microsoft/PowerToys/blob/main/doc/devdocs/development/style.md) for detailed rules.
+
+### Logging and Telemetry
+
+- **C++**: Use `spdlog` for logging
+- **C#**: Use the `Logger` class from `Common.UI`
+- **Telemetry**: Use `Telemetry::` namespace for metrics
+- **Log Levels**: Use appropriate levels (Error, Warning, Info, Debug, Trace)
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Write Clear Code" icon="code">
+    Use descriptive names and add comments for complex logic
+  </Card>
+  <Card title="Test Thoroughly" icon="flask">
+    Include unit tests and manual validation for all changes
+  </Card>
+  <Card title="Keep PRs Focused" icon="bullseye">
+    One logical change per PR makes review easier
+  </Card>
+  <Card title="Document Changes" icon="book">
+    Update docs when changing behavior or adding features
+  </Card>
+</CardGroup>
+
+## Code of Conduct
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+
+### Our Standards
+
+- **Be respectful**: Treat all contributors with respect
+- **Be collaborative**: Work together to solve problems
+- **Be inclusive**: Welcome newcomers and diverse perspectives
+- **Be professional**: Keep discussions focused and constructive
+
+### Reporting Issues
+
+If you experience or witness unacceptable behavior:
+
+- Review the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
+- Contact [opencode@microsoft.com](mailto:opencode@microsoft.com)
+
+## Becoming a Collaborator
+
+Active community contributors may be invited to join the PowerToys team as formal collaborators.
+
+**How to become a collaborator:**
+
+1. Make consistent, quality contributions
+2. File helpful bug reports and suggestions
+3. Review pull requests
+4. Help other community members
+5. Update documentation
+
+When the time is right, Microsoft will reach out to you.
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Developer Docs" icon="book-open" href="https://github.com/microsoft/PowerToys/tree/main/doc/devdocs">
+    Comprehensive developer documentation
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/microsoft/PowerToys/issues">
+    Browse and file issues
+  </Card>
+  <Card title="Help Wanted" icon="hand-paper" href="https://github.com/microsoft/PowerToys/labels/Help%20Wanted">
+    Find issues ready for contribution
+  </Card>
+  <Card title="Community" icon="users" href="https://github.com/microsoft/PowerToys/blob/main/COMMUNITY.md">
+    Meet the PowerToys community
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you need assistance:
+
+- **Questions**: File an issue with your question
+- **Bug reports**: Use the [bug report template](https://github.com/microsoft/PowerToys/issues/new?template=bug_report.yml)
+- **Feature requests**: Use the [feature request template](https://github.com/microsoft/PowerToys/issues/new?template=feature_request.yml)
+- **General discussion**: Join conversations in existing issues
+
+<Note>
+Microsoft support is limited to the resources provided in this documentation and on GitHub. For support policy details, see [SUPPORT.md](https://github.com/microsoft/PowerToys/blob/main/SUPPORT.md).
+</Note>
+
+## Thank You
+
+Thank you for contributing to PowerToys! Your efforts help make Windows more powerful and customizable for users around the world.

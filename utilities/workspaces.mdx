@@ -1,0 +1,500 @@
+---
+title: Workspaces
+description: Save and restore sets of applications with their window positions and layouts for different workflows.
+---
+
+Workspaces allows you to save snapshots of your running applications and their window arrangements, then restore them later with a single action. Perfect for managing different workflows or project contexts.
+
+## Overview
+
+Workspaces saves:
+- Running applications
+- Window positions and sizes
+- Window states (maximized, minimized, snapped)
+- Multi-monitor arrangements
+- Application arguments and parameters
+
+## Activation
+
+<Steps>
+  <Step title="Open Workspaces Editor">
+    Launch Workspaces from the PowerToys system tray menu or from Start Menu.
+  </Step>
+  <Step title="Create Workspace">
+    Click "Create New Workspace" or "Capture Current Layout."
+  </Step>
+  <Step title="Add Applications">
+    Select which running applications to include in the workspace.
+  </Step>
+  <Step title="Save Workspace">
+    Name your workspace and save it.
+  </Step>
+  <Step title="Launch Workspace">
+    Select a saved workspace and click "Launch" to restore the layout.
+  </Step>
+</Steps>
+
+## Creating Workspaces
+
+### Capture Current Layout
+
+The easiest way to create a workspace is from your current setup:
+
+<Steps>
+  <Step title="Arrange Windows">
+    Open and position all applications for your workflow.
+  </Step>
+  <Step title="Capture">
+    Open Workspaces and click "Capture Current Layout."
+  </Step>
+  <Step title="Select Apps">
+    Choose which running applications to include.
+  </Step>
+  <Step title="Configure">
+    Adjust window positions if needed.
+  </Step>
+  <Step title="Save">
+    Name and save the workspace.
+  </Step>
+</Steps>
+
+### Manual Workspace Creation
+
+<Tabs>
+  <Tab title="Add Applications">
+    Build workspace from scratch:
+    
+    1. Create new workspace
+    2. Click "Add Application"
+    3. Browse for executable or select from list
+    4. Configure window position and size
+    5. Repeat for all apps in workflow
+    6. Save workspace
+  </Tab>
+  
+  <Tab title="Configure Position">
+    Set window placement:
+    
+    - **Specific coordinates:** X, Y position and width, height
+    - **Maximized:** Full screen on specific monitor
+    - **Snapped:** Left/right half of screen
+    - **Minimized:** Start in taskbar
+    - **Monitor:** Which display to place window
+  </Tab>
+</Tabs>
+
+## Workspace Components
+
+From source `/src/modules/Workspaces/WorkspacesLauncher/Launcher.h:11-37`:
+
+<CodeGroup>
+```cpp Workspace Structure
+class Launcher
+{
+public:
+    Launcher(const WorkspacesData::WorkspacesProject& project, 
+             std::vector<WorkspacesData::WorkspacesProject>& workspaces, 
+             InvokePoint invokePoint);
+
+private:
+    WorkspacesData::WorkspacesProject m_project;
+    std::vector<WorkspacesData::WorkspacesProject>& m_workspaces;
+    
+    LaunchingStatus m_launchingStatus;
+    std::unique_ptr<LauncherUIHelper> m_uiHelper;
+    std::unique_ptr<WindowArrangerHelper> m_windowArrangerHelper;
+    
+    std::vector<std::pair<std::wstring, std::wstring>> m_launchErrors{};
+};
+```
+</CodeGroup>
+
+Key components:
+- **WorkspacesProject:** Container for workspace data
+- **LauncherUIHelper:** Handles UI during launch
+- **WindowArrangerHelper:** Positions windows after launch
+- **LaunchingStatus:** Tracks launch progress
+
+## Launching Workspaces
+
+### Launch Process
+
+<Steps>
+  <Step title="Select Workspace">
+    Choose workspace from Workspaces manager.
+  </Step>
+  <Step title="Launch Applications">
+    Workspaces launches all configured applications.
+  </Step>
+  <Step title="Arrange Windows">
+    Windows are automatically positioned according to saved layout.
+  </Step>
+  <Step title="Verify">
+    Check all applications launched and positioned correctly.
+  </Step>
+</Steps>
+
+<Accordion title="Launch Behavior">
+  When launching a workspace:
+  
+  - Applications start in parallel for faster launch
+  - Window positioning waits for applications to initialize
+  - Errors are tracked and reported
+  - Progress indicator shows launch status
+  - Timeout handling for unresponsive applications
+  
+  Implementation: `/src/modules/Workspaces/WorkspacesLauncher/Launcher.cpp`
+</Accordion>
+
+### Invoke Points
+
+Workspaces can be launched from multiple locations:
+
+From source `/src/modules/Workspaces/WorkspacesLauncher/Launcher.h:20`:
+
+```cpp
+const InvokePoint m_invokePoint;
+```
+
+- **Workspaces UI:** Manual launch from editor
+- **Command line:** Launch via CLI arguments
+- **Shortcuts:** Keyboard shortcuts or desktop shortcuts
+- **Startup:** Auto-launch on Windows login
+
+## Features
+
+### Multi-Monitor Support
+
+<Accordion title="Monitor Awareness">
+  Workspaces handles multiple monitors intelligently:
+  
+  - Save window positions relative to specific monitors
+  - Restore layouts across different monitor configurations
+  - Adapt to missing monitors (fallback to primary)
+  - Handle monitor resolution changes
+  - Support mixed DPI setups
+</Accordion>
+
+### Application Launch Configuration
+
+<AccordionGroup>
+  <Accordion title="Launch Parameters">
+    Configure how applications start:
+    
+    - **Executable path:** Full path to application
+    - **Command-line arguments:** Startup parameters
+    - **Working directory:** Starting folder
+    - **Run as administrator:** Elevated privileges (if needed)
+    - **Window state:** Normal, maximized, minimized
+  </Accordion>
+  
+  <Accordion title="Position Persistence">
+    Window positions are saved with:
+    
+    - X, Y coordinates
+    - Width and height
+    - Monitor identifier
+    - Snap state (if snapped)
+    - Maximized/minimized state
+    
+    Implementation: `/src/modules/Workspaces/WindowProperties/WorkspacesWindowPropertyUtils.h`
+  </Accordion>
+</AccordionGroup>
+
+### Window Arrangement
+
+From source `/src/modules/Workspaces/WorkspacesLauncher/WindowArrangerHelper.h`:
+
+<Accordion title="Window Arranger">
+  The Window Arranger component:
+  
+  - Waits for applications to finish initializing
+  - Detects when windows are ready to be positioned
+  - Applies saved positions and sizes
+  - Handles window snap states
+  - Manages Z-order (window stacking)
+  - Sends messages to coordinator
+  
+  ```cpp
+  std::unique_ptr<WindowArrangerHelper> m_windowArrangerHelper;
+  void handleWindowArrangerMessage(const std::wstring& msg);
+  ```
+</Accordion>
+
+### Registry Integration
+
+For persistent application data:
+
+Implementation: `/src/modules/Workspaces/WorkspacesLauncher/RegistryUtils.h`, `RegistryUtils.cpp`
+
+- Store workspace configurations
+- Persist application associations
+- Remember last used workspaces
+- Track launch statistics
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Development Environments" icon="code">
+    **Project Contexts:**
+    - Code editor + terminal + browser + debugger
+    - Different layouts for frontend/backend work
+    - Switch between multiple projects instantly
+    - Documentation + IDE + testing tools
+  </Card>
+  
+  <Card title="Content Creation" icon="photo-film">
+    **Creative Workflows:**
+    - Video editing + audio tools + file browser
+    - Design tools + reference images + color palettes
+    - Writing + research + notes
+    - 3D modeling + rendering + asset management
+  </Card>
+  
+  <Card title="Communication" icon="comments">
+    **Meeting Setups:**
+    - Video conferencing + notes + calendar + chat
+    - Presentation + speaker notes + timer
+    - Screen share preparation
+    - Team collaboration tools
+  </Card>
+  
+  <Card title="Research & Analysis" icon="chart-line">
+    **Data Workflows:**
+    - Spreadsheet + database + visualization
+    - Multiple document viewers
+    - Research papers + note-taking + citation manager
+    - Financial analysis tools
+  </Card>
+</CardGroup>
+
+<AccordionGroup>
+  <Accordion title="Daily Routines">
+    **Morning Startup:**
+    - Email client + calendar + task manager + news
+    - Positioned for productivity
+    - Launch with Windows startup
+    - Save time every day
+    
+    **Example:** "Morning" workspace opens Outlook, Teams, To-Do, and Edge on appropriate monitors.
+  </Accordion>
+  
+  <Accordion title="Context Switching">
+    **Multiple Projects:**
+    - Quickly switch between client projects
+    - Different toolsets for different work
+    - Separate workspaces for work/personal
+    - Meeting vs. focus time layouts
+    
+    **Example:** Switch from "Client A" workspace (Slack + Project Files + Browser) to "Client B" workspace (Teams + Different Files + Different Browser Profile).
+  </Accordion>
+  
+  <Accordion title="Teaching & Presentations">
+    **Training Sessions:**
+    - Demo applications + slides + notes
+    - Screen recording setup
+    - Virtual classroom layout
+    - Workshop preparation
+    
+    **Example:** "Training" workspace opens PowerPoint on projector, notes on laptop, and Zoom in present mode.
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Features
+
+### Launch Status Tracking
+
+From source `/src/modules/Workspaces/WorkspacesLauncher/Launcher.h:23`:
+
+```cpp
+LaunchingStatus m_launchingStatus;
+std::atomic<bool> m_launchedSuccessfully{};
+```
+
+Tracks:
+- Which applications have launched
+- Which windows have been positioned
+- Launch errors and failures
+- Overall workspace launch success
+
+### Error Handling
+
+<Accordion title="Launch Error Management">
+  From source `/src/modules/Workspaces/WorkspacesLauncher/Launcher.h:31-32`:
+  
+  ```cpp
+  std::vector<std::pair<std::wstring, std::wstring>> m_launchErrors{};
+  std::mutex m_launchErrorsMutex;
+  ```
+  
+  Workspaces handles:
+  - Application not found errors
+  - Insufficient permissions
+  - Timeout during launch
+  - Window positioning failures
+  - Monitor not available
+  
+  Errors are collected and presented to user after launch.
+</Accordion>
+
+### Application Launcher
+
+From source `/src/modules/Workspaces/WorkspacesLauncher/AppLauncher.h`:
+
+<Accordion title="App Launch Logic">
+  The AppLauncher component:
+  
+  - Resolves application paths
+  - Handles command-line arguments
+  - Manages working directories
+  - Supports elevation when needed
+  - Detects launch failures
+  - Returns process information
+</Accordion>
+
+### UI Helper
+
+From source `/src/modules/Workspaces/WorkspacesLauncher/LauncherUIHelper.h`:
+
+```cpp
+std::unique_ptr<LauncherUIHelper> m_uiHelper;
+void handleUIMessage(const std::wstring& msg);
+```
+
+Provides:
+- Launch progress indication
+- Error message display
+- Status updates during launch
+- User feedback during window arrangement
+
+## Configuration
+
+### Workspace Settings
+
+<Steps>
+  <Step title="Open Workspaces">
+    Launch Workspaces from PowerToys settings or system tray.
+  </Step>
+  <Step title="Configure Options">
+    Set global workspace preferences:
+    - Launch behavior
+    - Window arrangement timing
+    - Error handling
+  </Step>
+  <Step title="Per-Workspace Settings">
+    Configure individual workspace options:
+    - Auto-launch on startup
+    - Delay before window positioning
+    - Override monitor on missing displays
+  </Step>
+</Steps>
+
+### Keyboard Shortcuts
+
+Set up shortcuts to launch workspaces:
+- Assign hotkeys to specific workspaces
+- Quick switch between workspaces
+- Launch most recent workspace
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Applications Not Launching">
+    **Common Issues:**
+    - Application path changed or invalid
+    - Insufficient permissions (try "Run as administrator")
+    - Application requires user interaction on startup
+    - Antivirus blocking automated launch
+    
+    **Solutions:**
+    - Verify application paths in workspace configuration
+    - Update workspace with current application locations
+    - Check Windows Event Viewer for errors
+    - Whitelist PowerToys in security software
+  </Accordion>
+  
+  <Accordion title="Windows Not Positioning Correctly">
+    **Possible Causes:**
+    - Monitor configuration changed
+    - Application takes long to initialize
+    - DPI scaling differences
+    - Application overrides window position on startup
+    
+    **Fixes:**
+    - Update workspace with current monitor setup
+    - Increase window arrangement delay
+    - Manually adjust positions after launch
+    - Check application startup settings
+  </Accordion>
+  
+  <Accordion title="Missing Monitor Handling">
+    **When a saved monitor is unavailable:**
+    - Windows default to primary monitor
+    - Size/position may need adjustment
+    - Update workspace for current setup
+    
+    **Recommendation:** Create separate workspaces for different monitor configurations (e.g., "Office-3-Monitors" vs. "Home-Laptop").
+  </Accordion>
+  
+  <Accordion title="Workspace Won't Launch">
+    **Checklist:**
+    - Verify Workspaces is enabled in PowerToys
+    - Check workspace file isn't corrupted
+    - Ensure no applications are already running (if configured to avoid duplicates)
+    - Review launch errors in Workspaces UI
+    - Try launching applications individually
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Organizing Workspaces">
+    **Naming Conventions:**
+    - Use descriptive names: "Web Development" not "Workspace 1"
+    - Include context: "Client-ABC-Design" or "Morning-Routine"
+    - Add tags or prefixes: "[Work]" vs "[Personal]"
+    
+    **Folder Organization:**
+    - Group related workspaces
+    - Separate by project, time of day, or task type
+    - Archive old/unused workspaces
+  </Accordion>
+  
+  <Accordion title="Maintaining Workspaces">
+    **Regular Updates:**
+    - Update paths when applications move
+    - Refresh positions after monitor changes
+    - Remove deprecated applications
+    - Test workspaces periodically
+    
+    **Version Control:**
+    - Export important workspaces as backup
+    - Document workspace purposes
+    - Keep notes on special configurations
+  </Accordion>
+  
+  <Accordion title="Performance Tips">
+    **Optimize Launch Times:**
+    - Limit number of applications (< 10 per workspace)
+    - Avoid heavy applications that take long to start
+    - Use SSD for application installations
+    - Close resource-intensive apps before launching workspace
+    
+    **Window Arrangement:**
+    - Allow sufficient delay for app initialization
+    - Test different timing settings
+    - Consider manual positioning for problematic apps
+  </Accordion>
+</AccordionGroup>
+
+## Source Code
+
+Location: `/src/modules/Workspaces/`
+
+- Launcher: `WorkspacesLauncher/Launcher.h`, `Launcher.cpp`
+- Application launching: `WorkspacesLauncher/AppLauncher.h`, `AppLauncher.cpp`
+- Window arrangement: `WorkspacesLauncher/WindowArrangerHelper.h`, `WindowArrangerHelper.cpp`
+- UI helper: `WorkspacesLauncher/LauncherUIHelper.h`, `LauncherUIHelper.cpp`
+- Registry utilities: `WorkspacesLauncher/RegistryUtils.h`, `RegistryUtils.cpp`
+- Window properties: `WindowProperties/WorkspacesWindowPropertyUtils.h`

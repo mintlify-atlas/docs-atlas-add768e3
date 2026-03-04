@@ -1,0 +1,597 @@
+---
+title: Registry Preview
+description: A visual editor for Windows Registry files (.reg) that lets you review and edit registry changes before applying them.
+---
+
+Registry Preview is a standalone utility for viewing, editing, and understanding Windows Registry (.reg) files. Preview what changes will be made to your system before importing registry files.
+
+## Overview
+
+Registry Preview provides:
+- Visual representation of .reg file contents
+- Syntax highlighting for registry data
+- Hex editor for binary values
+- Safety preview before applying changes
+- File comparison capabilities
+
+## Activation
+
+<Steps>
+  <Step title="Open Registry File">
+    Double-click a `.reg` file or right-click and choose "Open with Registry Preview."
+  </Step>
+  <Step title="Review Changes">
+    Examine the registry keys, values, and data that will be modified.
+  </Step>
+  <Step title="Edit if Needed">
+    Make changes to registry values directly in Registry Preview.
+  </Step>
+  <Step title="Apply or Save">
+    Apply changes to registry or save as modified .reg file.
+  </Step>
+</Steps>
+
+<Note>
+  Registry Preview is a separate application from the PowerToys Settings. Launch it from Start Menu or by opening .reg files.
+</Note>
+
+## Interface
+
+### Main Window
+
+From source `/src/modules/registrypreview/RegistryPreview/RegistryPreviewXAML/MainWindow.xaml.cs:22-88`:
+
+<CodeGroup>
+```csharp Main Window
+public sealed partial class MainWindow : WindowEx
+{
+    private const string APPNAME = "RegistryPreview";
+    
+    private JsonObject jsonWindowPlacement;
+    private string settingsFolder;
+    private string windowPlacementFile = "app-placement.json";
+    
+    private RegistryPreviewMainPage MainPage { get; }
+}
+```
+</CodeGroup>
+
+Features:
+- Custom title bar with theme support
+- Window position and size persistence
+- AppIcon: `Assets\RegistryPreview\RegistryPreview.ico`
+- Minimum size: 320x240 pixels
+
+### File Structure Display
+
+<Tabs>
+  <Tab title="Tree View">
+    Registry keys displayed in hierarchical tree:
+    
+    ```
+    HKEY_CURRENT_USER
+    └─ Software
+       └─ Microsoft
+          └─ Windows
+             └─ CurrentVersion
+    ```
+    
+    - Expandable/collapsible nodes
+    - Visual hierarchy
+    - Key path navigation
+  </Tab>
+  
+  <Tab title="List View">
+    Registry values shown in detail:
+    
+    | Name | Type | Data |
+    |------|------|------|
+    | (Default) | REG_SZ | (value not set) |
+    | EnableFeature | REG_DWORD | 0x00000001 (1) |
+    | InstallPath | REG_SZ | C:\\Program Files\\App |
+  </Tab>
+</Tabs>
+
+### Value Types
+
+Registry Preview displays all registry value types:
+
+<Accordion title="Supported Types">
+  - **REG_SZ**: String value
+  - **REG_EXPAND_SZ**: Expandable string (environment variables)
+  - **REG_MULTI_SZ**: Multi-string value (array of strings)
+  - **REG_DWORD**: 32-bit number
+  - **REG_QWORD**: 64-bit number
+  - **REG_BINARY**: Binary data
+  - **REG_NONE**: No defined type
+</Accordion>
+
+## Features
+
+### Syntax Highlighting
+
+Registry file syntax with color coding:
+- Registry keys (blue)
+- Value names (black)
+- Value types (green)
+- Data values (red)
+- Comments (gray)
+- Errors (red underline)
+
+### Hex Editor
+
+Binary data editing with hex view:
+
+Implementation: `/src/modules/registrypreview/RegistryPreviewUILib/Controls/HexBox/`
+
+<Accordion title="Hex Editor Features">
+  From source `/src/modules/registrypreview/RegistryPreviewUILib/Controls/HexBox/AddressFormat.cs`:
+  
+  - Hex and ASCII dual view
+  - Byte-level editing
+  - Address display formatting
+  - Copy hex values
+  - Search in binary data
+  - Data type interpretation
+</Accordion>
+
+### Clipboard Integration
+
+From source `/src/modules/registrypreview/RegistryPreviewUILib/ClipboardHelper.cs`:
+
+<Accordion title="Clipboard Operations">
+  - Copy registry keys
+  - Copy values and data
+  - Paste registry snippets
+  - Export selections to clipboard
+</Accordion>
+
+### File Operations
+
+<CardGroup cols={2}>
+  <Card title="Open" icon="folder-open">
+    - Open .reg files
+    - Recent files list
+    - Drag and drop support
+    - Command-line arguments
+  </Card>
+  
+  <Card title="Save" icon="floppy-disk">
+    - Save modifications
+    - Save as new file
+    - Export selected keys
+    - Backup before apply
+  </Card>
+  
+  <Card title="Import" icon="file-import">
+    - Apply to registry
+    - Preview before import
+    - Undo support
+    - Backup creation
+  </Card>
+  
+  <Card title="Compare" icon="code-compare">
+    - Compare two .reg files
+    - Highlight differences
+    - Merge changes
+    - Conflict resolution
+  </Card>
+</CardGroup>
+
+## Safety Features
+
+<Warning>
+  Editing the Windows Registry can cause system instability if done incorrectly. Always review changes carefully and create backups.
+</Warning>
+
+### Preview Before Apply
+
+<Steps>
+  <Step title="Open Registry File">
+    Load .reg file in Registry Preview.
+  </Step>
+  <Step title="Review All Changes">
+    Examine every key and value that will be modified.
+  </Step>
+  <Step title="Understand Impact">
+    Research unfamiliar registry keys before applying.
+  </Step>
+  <Step title="Create Backup">
+    Export current registry state for affected keys.
+  </Step>
+  <Step title="Apply Changes">
+    Only after thorough review, apply changes.
+  </Step>
+</Steps>
+
+### Validation
+
+<Accordion title="File Validation">
+  Registry Preview validates:
+  
+  - .reg file format correctness
+  - Registry path syntax
+  - Value type compatibility
+  - Data format validity
+  - Encoding (UTF-16 LE with BOM)
+  
+  Invalid entries are highlighted before import.
+</Accordion>
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Software Configuration">
+    **Review Application Settings:**
+    
+    - Examine registry changes from installers
+    - Understand what settings are modified
+    - Customize application configurations
+    - Export settings for backup
+    
+    **Example:** Before installing software, open its .reg file to see what registry keys it modifies.
+  </Accordion>
+  
+  <Accordion title="System Tweaking">
+    **Windows Customization:**
+    
+    - Review registry tweaks from online sources
+    - Understand what optimizations do
+    - Test registry modifications safely
+    - Create custom tweak collections
+    
+    **Example:** Found a Windows 11 optimization .reg file online - preview it in Registry Preview to understand changes before applying.
+  </Accordion>
+  
+  <Accordion title="Troubleshooting">
+    **Registry Issue Diagnosis:**
+    
+    - Export and examine problematic registry keys
+    - Compare working vs. broken configurations
+    - Identify incorrect values
+    - Create fix .reg files
+    
+    **Example:** Application won't start - export its registry keys, compare with working machine, identify differences.
+  </Accordion>
+  
+  <Accordion title="Development & Testing">
+    **Developer Workflows:**
+    
+    - Test registry changes for applications
+    - Create installation registry scripts
+    - Debug registry-related issues
+    - Version control registry configurations
+    
+    **Example:** Developing installer - create .reg files for default settings, preview and test before deployment.
+  </Accordion>
+  
+  <Accordion title="Documentation">
+    **Registry Change Documentation:**
+    
+    - Document what registry changes do
+    - Create annotated .reg files
+    - Share registry configurations
+    - Provide visual guides
+    
+    **Example:** Write documentation showing exact registry values changed by configuration tool.
+  </Accordion>
+</AccordionGroup>
+
+## Registry File Format
+
+### .REG File Structure
+
+<CodeGroup>
+```registry Example .reg File
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\MyApp]
+"Version"="1.0.0"
+"InstallPath"="C:\\Program Files\\MyApp"
+"Enabled"=dword:00000001
+"Settings"=hex:01,00,00,00,0f,00,00,00
+
+[HKEY_CURRENT_USER\Software\MyApp\Advanced]
+"Features"=hex(7):46,00,65,00,61,00,74,00,75,00,72,00,65,00,31,00,00,00,\
+  46,00,65,00,61,00,74,00,75,00,72,00,65,00,32,00,00,00,00,00
+
+; Delete a key
+[-HKEY_CURRENT_USER\Software\OldApp]
+
+; Delete a value
+[HKEY_CURRENT_USER\Software\MyApp]
+"OldSetting"=-
+```
+</CodeGroup>
+
+### Format Details
+
+<Tabs>
+  <Tab title="Header">
+    All .reg files must start with:
+    
+    ```registry
+    Windows Registry Editor Version 5.00
+    ```
+    
+    This identifies the file format (Windows 2000 and later).
+  </Tab>
+  
+  <Tab title="Keys">
+    Registry keys in square brackets:
+    
+    ```registry
+    [HKEY_LOCAL_MACHINE\Software\Company\Product]
+    ```
+    
+    To delete a key, prefix with minus:
+    
+    ```registry
+    [-HKEY_CURRENT_USER\Software\OldApp]
+    ```
+  </Tab>
+  
+  <Tab title="Values">
+    Value format: `"Name"=type:data`
+    
+    **String (REG_SZ):**
+    ```registry
+    "AppName"="My Application"
+    ```
+    
+    **DWORD (32-bit):**
+    ```registry
+    "Version"=dword:00000001
+    ```
+    
+    **QWORD (64-bit):**
+    ```registry
+    "LargeValue"=hex(b):01,00,00,00,00,00,00,00
+    ```
+    
+    **Binary:**
+    ```registry
+    "Data"=hex:00,01,02,03,04,05
+    ```
+    
+    **Multi-String (REG_MULTI_SZ):**
+    ```registry
+    "List"=hex(7):49,00,74,00,65,00,6d,00,31,00,00,00,49,00,74,00,65,00,\
+      6d,00,32,00,00,00,00,00
+    ```
+    
+    To delete a value:
+    ```registry
+    "OldValue"=-
+    ```
+  </Tab>
+  
+  <Tab title="Comments">
+    Lines starting with semicolon are comments:
+    
+    ```registry
+    ; This is a comment
+    ; Comments are ignored when importing
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Features
+
+### Window Placement Persistence
+
+From source `/src/modules/registrypreview/RegistryPreview/RegistryPreviewXAML/MainWindow.xaml.cs:38-81`:
+
+<Accordion title="Window State Management">
+  Registry Preview saves window position and size:
+  
+  ```csharp
+  settingsFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + 
+                   @"\Microsoft\PowerToys\" + APPNAME;
+  windowPlacementFile = "app-placement.json";
+  ```
+  
+  Saved state:
+  - Window position (X, Y)
+  - Window size (Width, Height)
+  - Validated before restore (minimum 320x240)
+  - Per-user settings storage
+</Accordion>
+
+### Theme Support
+
+Automatic theme detection and application:
+- Light mode
+- Dark mode  
+- High contrast
+- Follows Windows theme
+
+### Title Bar Customization
+
+From source `/src/modules/registrypreview/RegistryPreview/RegistryPreviewXAML/MainWindow.xaml.cs:44-48`:
+
+```csharp
+// Extend canvas to include title bar for theming
+ExtendsContentIntoTitleBar = true;
+SetTitleBar(titleBar);
+AppWindow.SetIcon("Assets\\RegistryPreview\\RegistryPreview.ico");
+```
+
+### File Association
+
+Registry Preview can be set as default .reg file handler:
+- Replaces default registry editor prompt
+- Previews before import
+- Safer than direct import
+
+## Configuration
+
+### Settings Location
+
+<Accordion title="Settings Storage">
+  Registry Preview settings stored at:
+  
+  ```
+  %LOCALAPPDATA%\Microsoft\PowerToys\RegistryPreview\
+  ```
+  
+  Files:
+  - `app-placement.json` - Window position and size
+  - User preferences and recent files
+</Accordion>
+
+### Appearance Options
+
+- Font size for registry display
+- Color scheme (follow system or custom)
+- Hex editor display format
+- Tree view indentation
+
+### Editor Preferences
+
+- Auto-save enabled/disabled
+- Backup before apply
+- Confirmation dialogs
+- Default open/save location
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + O` | Open .reg file |
+| `Ctrl + S` | Save changes |
+| `Ctrl + Shift + S` | Save as |
+| `Ctrl + F` | Find in file |
+| `Ctrl + H` | Find and replace |
+| `Ctrl + C` | Copy selected |
+| `Ctrl + V` | Paste |
+| `Ctrl + Z` | Undo |
+| `Ctrl + Y` | Redo |
+| `F5` | Refresh |
+| `Ctrl + W` | Close file |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Can't Open .reg Files">
+    **Issues:**
+    - File association not set
+    - Registry Preview not in PATH
+    - File encoding incorrect
+    
+    **Solutions:**
+    - Right-click .reg file > Open with > Registry Preview
+    - Set Registry Preview as default .reg handler
+    - Ensure .reg file is UTF-16 LE with BOM
+    - Check file isn't corrupted
+  </Accordion>
+  
+  <Accordion title="Syntax Errors Shown">
+    **Common Issues:**
+    - Invalid registry path format
+    - Incorrect value type syntax
+    - Missing header line
+    - Wrong encoding
+    
+    **Fixes:**
+    - Verify registry path follows HKEY_* format
+    - Check value type syntax (dword:, hex:, etc.)
+    - Ensure first line is "Windows Registry Editor Version 5.00"
+    - Save file as UTF-16 LE with BOM
+  </Accordion>
+  
+  <Accordion title="Changes Not Applying">
+    **Reasons:**
+    - Insufficient permissions (need admin for HKLM)
+    - Registry key protected by policy
+    - Syntax errors in .reg file
+    - Application using registry key is running
+    
+    **Solutions:**
+    - Run Registry Preview as administrator
+    - Check Group Policy restrictions
+    - Fix validation errors before applying
+    - Close applications using the registry keys
+  </Accordion>
+  
+  <Accordion title="Hex Editor Issues">
+    **Problems:**
+    - Binary data not displaying correctly
+    - Can't edit hex values
+    - Encoding problems
+    
+    **Fixes:**
+    - Verify data type is REG_BINARY or similar
+    - Check hex editor mode is active
+    - Ensure valid hex characters (0-9, A-F)
+    - Restart Registry Preview
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Safety Guidelines">
+    **Before Applying Changes:**
+    
+    1. **Always review** every change in Registry Preview
+    2. **Create backup** of affected registry keys
+    3. **Research unfamiliar keys** before modifying
+    4. **Test in VM** if possible
+    5. **Document changes** for future reference
+    6. **Create restore point** before major changes
+  </Accordion>
+  
+  <Accordion title="File Management">
+    **Organizing .reg Files:**
+    
+    - Use descriptive filenames
+    - Add comments explaining what changes do
+    - Version control for important configurations
+    - Separate tweaks by category
+    - Keep backup/restore pairs together
+  </Accordion>
+  
+  <Accordion title="Editing Tips">
+    **Effective Registry Editing:**
+    
+    - Work on copies, not original files
+    - Validate syntax before applying
+    - Test on non-production systems first
+    - Export current state before changes
+    - Use hex editor for binary data
+    - Comment your modifications
+  </Accordion>
+</AccordionGroup>
+
+## Telemetry
+
+Registry Preview collects minimal telemetry:
+
+From source `/src/modules/registrypreview/RegistryPreview/Telemetry/`:
+- `RegistryPreviewEditorStartEvent.cs` - Launch tracking
+- `RegistryPreviewEditorStartFinishEvent.cs` - Startup completion timing
+
+<Accordion title="Privacy">
+  Telemetry data:
+  - Application start/finish events
+  - Timestamp of launches
+  - No file content or registry data collected
+  - Anonymous usage statistics only
+</Accordion>
+
+## Source Code
+
+Location: `/src/modules/registrypreview/`
+
+- Main window: `RegistryPreview/RegistryPreviewXAML/MainWindow.xaml.cs`
+- UI library: `RegistryPreviewUILib/`
+- Hex editor: `RegistryPreviewUILib/Controls/HexBox/`
+- Clipboard helper: `RegistryPreviewUILib/ClipboardHelper.cs`
+- Telemetry: `RegistryPreview/Telemetry/`
+- Event handling: `RegistryPreview/MainWindow.Events.cs`
+- Utilities: `RegistryPreview/MainWindow.Utilities.cs`
+
+<Note>
+  Registry Preview is a WinUI 3 application that provides a safer alternative to directly importing .reg files into the Windows Registry.
+</Note>
