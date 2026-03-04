@@ -535,6 +535,52 @@ class DraggingState
   </Accordion>
 </AccordionGroup>
 
+## Command Line Interface
+
+FancyZones includes a CLI for automation and scripting:
+
+### Available Commands
+
+**Get Information:**
+```powershell
+# List all monitors
+FancyZonesCLI.exe get-monitors
+
+# Get available layouts
+FancyZonesCLI.exe get-layouts
+
+# Get active layout for a monitor
+FancyZonesCLI.exe get-active-layout --monitor <monitor-id>
+
+# Get current hotkeys
+FancyZonesCLI.exe get-hotkeys
+```
+
+**Set Configuration:**
+```powershell
+# Set layout for a monitor
+FancyZonesCLI.exe set-layout --monitor <monitor-id> --layout <layout-id>
+
+# Set hotkey
+FancyZonesCLI.exe set-hotkey --action <action> --key <key>
+
+# Remove hotkey
+FancyZonesCLI.exe remove-hotkey --action <action>
+```
+
+**Open UI:**
+```powershell
+# Open layout editor
+FancyZonesCLI.exe open-editor
+
+# Open settings
+FancyZonesCLI.exe open-settings
+```
+
+<Note>
+The CLI requires FancyZones to be running. All commands send notifications to the running instance.
+</Note>
+
 ## See Also
 
 - [Always On Top](/utilities/always-on-top) - Keep windows visible
